@@ -58,27 +58,44 @@ export function PermissionProvider({ children }: { children: React.ReactNode }) 
   const loadUser = useCallback(async () => {
     setLoading(true);
     try {
-      const [userData, modulesData, accessData] = await Promise.all([
-        userService.getCurrentUser(),
-        userService.getUserModules(),
-        getCurrentUserModuleAccess(),
-      ]);
-
+      // 1. Fetch the primary user profile first
+      const userData = await userService.getCurrentUser();
       setUser(userData);
 
-      if (modulesData?.modules?.length) {
-        // Store ALL modules from API, including those with empty permissions
-        const permsFromModules: Record<string, string[]> = {};
-        for (const m of modulesData.modules) {
-          permsFromModules[m.name] = m.permissions;
-        }
-        setPermissions(permsFromModules);
-      } else {
-        setPermissions(userData?.module_permissions || null);
-      }
+      if (userData) {
+        // 2. Attempt to fetch extra permission data, but don't fail if they error out
+        // Some endpoints (like /v1/admin/dashboard) may not be intended for all roles.
+        try {
+          const [modulesData, accessData] = await Promise.all([
+            userService.getUserModules().catch(() => null),
+            getCurrentUserModuleAccess().catch(() => null),
+          ]);
 
-      setModuleAccess(accessData);
-    } catch {
+          if (modulesData?.modules?.length) {
+            // Store ALL modules from API, including those with empty permissions
+            const permsFromModules: Record<string, string[]> = {};
+            for (const m of modulesData.modules) {
+              permsFromModules[m.name] = m.permissions;
+            }
+            setPermissions(permsFromModules);
+          } else {
+            // Fallback to permissions attached to the user object
+            setPermissions(userData.module_permissions || null);
+          }
+
+          setModuleAccess(accessData);
+        } catch (auxError) {
+          console.warn('Non-critical error fetching auxiliary permission data:', auxError);
+          // Fallback to basic module permissions from user object
+          setPermissions(userData.module_permissions || null);
+          setModuleAccess(null);
+        }
+      } else {
+        setPermissions(null);
+        setModuleAccess(null);
+      }
+    } catch (criticalError) {
+      console.error('Critical error loading user permissions:', criticalError);
       setUser(null);
       setPermissions(null);
       setModuleAccess(null);

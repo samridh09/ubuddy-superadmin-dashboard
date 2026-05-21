@@ -1,87 +1,109 @@
 'use client';
 
 import { useRouter, usePathname } from 'next/navigation';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import {
   LogOut,
   LayoutDashboard,
   School,
   UserCog,
-  HelpCircle,
   type LucideIcon
 } from 'lucide-react';
 import { useAuth } from '@/providers/auth-provider';
-import { NavItem } from "@/types/components/SuperAdminSidebar";
-import { fetchWithAuth } from '@/lib/api-client';
-import { API_ENDPOINTS, handleApiError } from '@/lib/api';
+import { usePermissions } from '@/hooks/usePermissions';
 
-const ICON_MAP: Record<string, LucideIcon> = {
-  LayoutDashboard,
-  School,
-  UserCog,
-};
+interface NavItem {
+  id: string;
+  name: string;
+  route: string;
+  icon: LucideIcon;
+  description?: string;
+}
+
+const SidebarSkeleton = ({ isCollapsed }: { isCollapsed: boolean }) => (
+  <div className="space-y-0.5 pt-2">
+    {[60, 80, 70].map((w, i) => (
+      <div key={i} className={`mx-2 flex items-center ${isCollapsed ? 'justify-center' : 'px-6'} py-2.5 rounded-lg`}>
+        <div className="w-4 h-4 rounded bg-gray-200 animate-pulse shrink-0" />
+        {!isCollapsed && <div className="ml-4 h-2.5 rounded bg-gray-200 animate-pulse" style={{ width: `${w}%` }} />}
+      </div>
+    ))}
+  </div>
+);
 
 export default function SuperAdminSidebar() {
   const router = useRouter();
   const pathname = usePathname();
-  const { logout } = useAuth();
-  
+  const { logout, user: authUser } = useAuth();
+  const { hasPermission, loading: permissionsLoading } = usePermissions();
+
   const [isCollapsed, setIsCollapsed] = useState(true);
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
-  const [navItems, setNavItems] = useState<NavItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+
+  const userRole = authUser?.role;
+  const isSuperAdmin = userRole === 'SUPER_ADMIN';
+  const isConfigAdmin = userRole === 'CONFIGURATION_ADMIN';
 
   const isWireframe = pathname.startsWith('/wireframes/ui');
   const base = isWireframe ? '/wireframes/ui' : '/super-admin';
 
-  useEffect(() => {
-    const fetchSidebar = async () => {
-      try {
-        setIsLoading(true);
-        const response = await fetchWithAuth(API_ENDPOINTS.admin.sidebar);
-        if (!response.ok) {
-          await handleApiError(response, 'Failed to fetch sidebar');
-        }
-        const result = await response.json();
-        
-        if (result.success && Array.isArray(result.data)) {
-          const mappedItems: NavItem[] = result.data.map((item: any) => {
-            // Adjust route if in wireframe mode
-            let route = item.route;
-            if (isWireframe) {
-              route = route.replace('/super-admin', '/wireframes/ui');
-            }
+  const navItems: NavItem[] = useMemo(() => [
+    { 
+      id: 'dashboard',            
+      name: 'Dashboard',            
+      route: base,                             
+      icon: LayoutDashboard,
+      description: "Super admin dashboard overview"
+    },
+    { 
+      id: 'school',               
+      name: 'School',               
+      route: `${base}/school`,                 
+      icon: School,
+      description: "Manage schools"
+    },
+    { 
+      id: 'configuration-admin',  
+      name: 'Configuration Admin',  
+      route: `${base}/configuration-admin`,   
+      icon: UserCog,
+      description: "Configure admin settings"
+    },
+  ], [base]);
 
-            return {
-              id: item.id,
-              name: item.name,
-              route: route,
-              icon: ICON_MAP[item.icon] || HelpCircle
-            };
-          });
-          setNavItems(mappedItems);
-        }
-      } catch (error) {
-        console.error('Error fetching sidebar:', error);
-        // Fallback to static items if API fails or for development
-        const fallbackItems: NavItem[] = [
-          { id: 'dashboard',            name: 'Dashboard',            route: base,                              icon: LayoutDashboard },
-          { id: 'school',               name: 'School',               route: `${base}/school`,               icon: School },
-          { id: 'configuration-admin',  name: 'Configuration Admin',  route: `${base}/configuration-admin`,  icon: UserCog },
-        ];
-        setNavItems(fallbackItems);
-      } finally {
-        setIsLoading(false);
+  const filteredNavItems = useMemo(() => {
+    // 1. Dashboard: Always visible
+    return navItems.filter((item) => {
+      if (item.id === 'dashboard') return true;
+
+      // 2. SUPER_ADMIN: Has access to everything except what might be specifically restricted
+      if (isSuperAdmin) return true;
+
+      // 3. School Management:
+      // - Requires 'schools' READ permission
+      if (item.id === 'school') {
+        return hasPermission('schools', 'READ');
       }
-    };
 
-    fetchSidebar();
-  }, [base, isWireframe]);
+      // 4. Configuration Admin: 
+      // - Explicitly hidden for CONFIGURATION_ADMIN role
+      // - Otherwise, requires 'sub-admin' READ permission
+      if (item.id === 'configuration-admin') {
+        if (isConfigAdmin) return false;
+        return hasPermission('sub-admin', 'READ');
+      }
+
+      return true;
+    });
+  }, [navItems, isSuperAdmin, isConfigAdmin, hasPermission]);
 
   const renderNavItem = (item: NavItem) => {
     const Icon = item.icon;
-    const isActive = pathname === item.route || (item.id !== 'dashboard' && pathname.startsWith(item.route));
-    
+    const isActive =
+      item.id === 'dashboard'
+        ? pathname === item.route
+        : pathname === item.route || pathname.startsWith(item.route + '/');
+
     return (
       <div key={item.id}>
         <button
@@ -100,7 +122,11 @@ export default function SuperAdminSidebar() {
             } ${isCollapsed ? '' : 'mr-4'}`}
           />
           {!isCollapsed && (
-            <span className={`text-[12px] font-bold whitespace-nowrap overflow-hidden text-left flex-1 tracking-tight ${isActive ? 'text-blue-700' : ''}`}>
+            <span
+              className={`text-[12px] font-bold whitespace-nowrap overflow-hidden text-left flex-1 tracking-tight ${
+                isActive ? 'text-blue-700' : ''
+              }`}
+            >
               {item.name.toUpperCase()}
             </span>
           )}
@@ -116,7 +142,12 @@ export default function SuperAdminSidebar() {
         onMouseLeave={() => setIsCollapsed(true)}
         className={`${isCollapsed ? 'w-16' : 'w-[280px]'} h-screen bg-white flex flex-col shrink-0 transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] relative z-[100] overflow-hidden border-r border-gray-100 shadow-sm`}
       >
-        <div className={`h-16 ${isCollapsed ? 'justify-center border-none' : 'px-8 justify-start'} flex items-center shrink-0 border-b border-gray-50`}>
+        {/* Logo */}
+        <div
+          className={`h-16 ${
+            isCollapsed ? 'justify-center border-none' : 'px-8 justify-start'
+          } flex items-center shrink-0 border-b border-gray-50`}
+        >
           {!isCollapsed ? (
             <h1 className="font-extrabold text-blue-900 text-[15px] tracking-[0.2em] uppercase animate-in fade-in slide-in-from-left-4 duration-700">
               UBUDDY
@@ -128,35 +159,32 @@ export default function SuperAdminSidebar() {
           )}
         </div>
 
-        <div className="flex-1 overflow-y-auto pt-4 px-0 space-y-0.5 scrollbar-custom border-none">
+        {/* Nav items */}
+        <div className="flex-1 overflow-y-auto pt-4 px-0 scrollbar-custom border-none">
           <div className="px-2 space-y-0.5">
-            {isLoading ? (
-              <div className="space-y-2 px-2">
-                {[1, 2, 3].map((i) => (
-                  <div
-                    key={i}
-                    className={`w-full flex items-center ${isCollapsed ? 'justify-center' : 'px-4'} py-2.5 rounded-lg animate-pulse`}
-                  >
-                    <div className={`shrink-0 bg-gray-200 rounded-md ${isCollapsed ? 'w-5 h-5' : 'w-5 h-5 mr-4'}`} />
-                    {!isCollapsed && (
-                      <div className="h-3 bg-gray-200 rounded-md flex-1" />
-                    )}
-                  </div>
-                ))}
-              </div>
+            {(permissionsLoading && !isSuperAdmin) ? (
+              <SidebarSkeleton isCollapsed={isCollapsed} />
             ) : (
-              navItems.map((item) => renderNavItem(item))
+              filteredNavItems.map((item) => renderNavItem(item))
             )}
           </div>
         </div>
 
+        {/* Sign out */}
         <div className="p-4 bg-gray-50/50 border-t border-gray-100">
           <button
             onClick={() => setIsLogoutModalOpen(true)}
-            className={`w-full flex items-center gap-3 ${isCollapsed ? 'justify-center py-3' : 'px-6 py-3.5'} rounded-xl bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all duration-300 group active:scale-95`}
+            className={`w-full flex items-center gap-3 ${
+              isCollapsed ? 'justify-center py-3' : 'px-6 py-3.5'
+            } rounded-xl bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all duration-300 group active:scale-95`}
           >
-            <LogOut size={isCollapsed ? 20 : 18} className="group-hover:rotate-12 transition-transform" />
-            {!isCollapsed && <span className="text-[12px] font-bold uppercase tracking-widest">Sign Out</span>}
+            <LogOut
+              size={isCollapsed ? 20 : 18}
+              className="group-hover:rotate-12 transition-transform"
+            />
+            {!isCollapsed && (
+              <span className="text-[12px] font-bold uppercase tracking-widest">Sign Out</span>
+            )}
           </button>
         </div>
       </aside>
@@ -174,7 +202,11 @@ export default function SuperAdminSidebar() {
             </p>
             <div className="flex flex-col w-full gap-3">
               <button
-                onClick={() => { setIsLogoutModalOpen(false); logout(); router.push('/'); }}
+                onClick={() => {
+                  setIsLogoutModalOpen(false);
+                  logout();
+                  router.push('/');
+                }}
                 className="w-full py-4 bg-red-500 text-white rounded-2xl font-black text-[14px] uppercase tracking-widest shadow-lg shadow-red-500/20 hover:bg-red-600 active:scale-95 transition-all"
               >
                 Yes, Sign Out
