@@ -8,7 +8,8 @@ import { FormSelect } from '@/components/ui/form-select';
 import { DateInput, formatDateDisplay } from '@/components/ui/date-input';
 import { updateConfigAdmin } from '@/lib/services/config-admin-service';
 import { toast } from 'react-toastify';
-import { EditData } from "@/types/components/ConfigAdminEditProfileView";
+import { CONFIG_ADMIN_PATTERNS, GENDER_OPTIONS, formatPhoneNumber } from '@/constants/config-admin-form';
+import { validateConfigAdminField } from '@/lib/validation/config-admin-validation';
 
 const STATUS_COLORS: Record<string, string> = {
   Active:     'bg-emerald-50 text-emerald-600 border border-emerald-100',
@@ -19,13 +20,6 @@ const STATUS_COLORS: Record<string, string> = {
 const INPUT_VIEW = 'w-full bg-transparent border-none rounded-xl px-0 py-3 text-[13px] font-bold text-blue-900 focus:outline-none cursor-default';
 const INPUT_EDIT = "w-full px-4 py-3 border border-gray-100 rounded-xl text-[13px] font-bold bg-gray-50/50 text-blue-900 focus:bg-white focus:ring-4 focus:ring-blue-900/5 focus:border-blue-600 outline-none transition-all placeholder:text-gray-300";
 const INPUT_ERROR = "w-full px-4 py-3 border border-red-500 rounded-xl text-[13px] font-bold bg-white text-red-900 focus:ring-4 focus:ring-red-500/5 focus:border-red-600 outline-none transition-all placeholder:text-red-300";
-
-function formatMobile(val: string): string {
-  const d = val.replace(/\D/g, '');
-  if (d.length <= 3) return d;
-  if (d.length <= 6) return `${d.slice(0, 3)}-${d.slice(3)}`;
-  return `${d.slice(0, 3)}-${d.slice(3, 6)}-${d.slice(6)}`;
-}
 
 function formatDateForApi(isoDate: string): string {
   if (!isoDate) return '';
@@ -51,7 +45,7 @@ function EditableField({
   maxLength?:    number;
   type?:         'text' | 'textarea' | 'select' | 'date';
   options?:      { label: string; value: string }[];
-  onValidate?:   (field: string, val: string) => string;
+  onValidate?:   (field: any, val: string) => string | undefined;
   error?:        string;
   icon?:         any;
 }) {
@@ -69,6 +63,15 @@ function EditableField({
   const activeErr  = error || fieldErr;
 
   const handleSave = async () => {
+    // Validate before saving
+    if (onValidate && apiField) {
+      const err = onValidate(apiField, temp);
+      if (err) {
+        setFieldErr(err);
+        return;
+      }
+    }
+
     if (!onSave || !apiField) { setValue(temp); onCancel?.(); return; }
     setSaving(true); setFieldErr('');
     try {
@@ -111,7 +114,7 @@ function EditableField({
               isEditing ? (
                 <DateInput
                   value={temp}
-                  onChange={val => { setTemp(val); if (onValidate && apiField) setFieldErr(onValidate(apiField, val)); }}
+                  onChange={val => { setTemp(val); if (onValidate && apiField) setFieldErr(onValidate(apiField, val) || ''); }}
                   calendarDisabled={{ after: new Date() }}
                   error={!!activeErr}
                 />
@@ -125,7 +128,7 @@ function EditableField({
                 value={temp?.toUpperCase()}
                 onValueChange={val => {
                   setTemp(val);
-                  if (onValidate && apiField) setFieldErr(onValidate(apiField, val));
+                  if (onValidate && apiField) setFieldErr(onValidate(apiField, val) || '');
                 }}
                 disabled={saving}
                 options={options || []}
@@ -137,28 +140,36 @@ function EditableField({
                 {displayVal}
               </div>
             ) : rows ? (
-              <textarea
-                ref={inputRef as React.RefObject<HTMLTextAreaElement>}
-                value={isEditing ? temp : displayVal}
-                onChange={e => {
-                  if (maxLength && e.target.value.length > maxLength) return;
-                  const val = e.target.value;
-                  setTemp(val);
-                  if (onValidate && apiField) setFieldErr(onValidate(apiField, val));
-                }}
-                disabled={!isEditing || saving}
-                rows={rows}
-                className={`${fieldInputCls} resize-none ${!isEditing && isEmpty ? 'text-gray-300 italic font-medium' : ''} ${isEditing && Icon ? 'pl-10' : ''}`}
-              />
+              <div className="relative">
+                <textarea
+                  ref={inputRef as React.RefObject<HTMLTextAreaElement>}
+                  value={isEditing ? temp : displayVal}
+                  onChange={e => {
+                    const val = e.target.value;
+                    setTemp(val);
+                    if (onValidate && apiField) setFieldErr(onValidate(apiField, val) || '');
+                  }}
+                  disabled={!isEditing || saving}
+                  rows={rows}
+                  className={`${fieldInputCls} resize-none ${!isEditing && isEmpty ? 'text-gray-300 italic font-medium' : ''} ${isEditing && Icon ? 'pl-10' : ''}`}
+                />
+                {isEditing && maxLength && (
+                  <span className={`absolute bottom-2 right-4 text-[10px] font-bold ${temp.length >= maxLength ? 'text-red-500' : 'text-gray-400'}`}>
+                    {temp.length} / {maxLength}
+                  </span>
+                )}
+              </div>
             ) : (
               <input
                 ref={inputRef as React.RefObject<HTMLInputElement>}
                 value={isEditing ? temp : displayVal}
                 onChange={e => {
-                  if (maxLength && e.target.value.length > maxLength) return;
-                  const val = e.target.value;
+                  let val = e.target.value;
+                  if (apiField === 'mobileNumber' || apiField === 'alternateMobileNumber') {
+                    val = formatPhoneNumber(val);
+                  }
                   setTemp(val);
-                  if (onValidate && apiField) setFieldErr(onValidate(apiField, val));
+                  if (onValidate && apiField) setFieldErr(onValidate(apiField, val) || '');
                 }}
                 disabled={!isEditing || saving}
                 className={`${fieldInputCls} ${!isEditing && isEmpty ? 'text-gray-300 italic font-medium' : ''} ${isEditing && Icon ? 'pl-10' : ''}`}
@@ -190,54 +201,19 @@ function EditableField({
   );
 }
 
-export const ConfigAdminEditProfileView: React.FC<{ data: EditData; adminId: string }> = ({ data, adminId }) => {
+export const ConfigAdminEditProfileView: React.FC<{ data: any; adminId: string }> = ({ data, adminId }) => {
   const router   = useRouter();
   const idParam  = `?adminId=${adminId}`;
   const [saveErr, setSaveErr]       = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [activeField, setActiveField] = useState<string | null>(null);
-  const [draftData, setDraftData] = useState<EditData>(data);
+  const [draftData, setDraftData] = useState<any>(data);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(data.avatar || null);
   const fileInputRef                = useRef<HTMLInputElement>(null);
 
   // Sync draft if prop changes (initial load)
   useEffect(() => { setDraftData(data); setPreviewUrl(data.avatar || null); }, [data]);
-
-  const validateField = (name: string, value: string) => {
-    let error = '';
-    const nameRegex = /^[a-zA-Z\s'\-\.]+$/;
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-    switch (name) {
-      case 'name':
-        if (!value) error = 'Name is required';
-        else if (value.length > 50) error = 'Maximum 50 characters allowed';
-        else if (!nameRegex.test(value)) error = 'Only alphabets, apostrophe, hyphen and dot allowed';
-        break;
-      case 'gender':
-        if (!value) error = 'Gender is required';
-        break;
-      case 'designation':
-        if (!value) error = 'Designation is required';
-        else if (value.length > 50) error = 'Maximum 50 characters allowed';
-        break;
-      case 'mobileNumber':
-        if (!value) error = 'Mobile number is required';
-        else if (value.replace(/\D/g, '').length < 10) error = 'Enter a valid 10-digit number';
-        break;
-      case 'email':
-        if (!value) error = 'Email is required';
-        else if (!emailRegex.test(value)) error = 'Enter a valid email address';
-        break;
-      case 'remarks':
-        if (value.length > 200) error = 'Maximum 200 characters allowed';
-        break;
-    }
-    
-    setErrors(prev => ({ ...prev, [name]: error }));
-    return error;
-  };
 
   const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -257,75 +233,26 @@ export const ConfigAdminEditProfileView: React.FC<{ data: EditData; adminId: str
 
   const saveField = async (apiField: string, value: string) => {
     // Validate first
-    const err = validateField(apiField, value);
+    const err = validateConfigAdminField(apiField as any, value);
     if (err) throw new Error(err);
 
-    // Update draft locally
-    setDraftData(prev => ({ ...prev, [apiField]: value }));
-  };
-
-  const handleGlobalSave = async () => {
-    // Final validation sweep
-    const eName        = validateField('name',         draftData.name);
-    const eGender      = validateField('gender',       draftData.gender);
-    const eDesignation = validateField('designation',  draftData.designation);
-    const eMobile      = validateField('mobileNumber', draftData.mobileNumber);
-    const eEmail       = validateField('email',        draftData.email);
-    const eRemarks     = validateField('remarks',      draftData.remarks);
-
-    if (eName || eGender || eDesignation || eMobile || eEmail || eRemarks) {
-      setSaveErr('Please fix the errors before saving');
-      return;
+    // Prepare payload
+    let finalValue: any = value;
+    if (apiField === 'mobileNumber' || apiField === 'alternateMobileNumber') {
+      finalValue = value.replace(/\D/g, '');
+    } else if (apiField === 'dateOfBirth') {
+      finalValue = formatDateForApi(value);
     }
 
-    setIsSubmitting(true);
-    setSaveErr('');
-    
     try {
-      const payload: any = {};
-      let hasChanges = false;
-
-      Object.entries(draftData).forEach(([key, val]) => {
-        if (key === 'avatar' || key === 'status' || key === 'role' || key === 'username') return;
-
-        const originalVal = (data as any)[key];
-        let isChanged = val !== originalVal;
-
-        // Special case: Gender might be 'Male' in original but 'MALE' in draft
-        if (key === 'gender') {
-          isChanged = val.toUpperCase() !== (originalVal?.toUpperCase() || '');
-        }
-
-        if (isChanged) {
-          hasChanges = true;
-          if (key === 'dateOfBirth' && val) {
-            payload.dateOfBirth = formatDateForApi(val);
-          } else {
-            payload[key] = val;
-          }
-        }
-      });
-
-      if (!hasChanges) {
-        setActiveField(null);
-        setIsSubmitting(false);
-        router.push(`/super-admin/configuration-admin/profile${idParam}`);
-        return;
-      }
-
-      await updateConfigAdmin(adminId, payload);
-      
-      toast.success('Profile updated successfully');
-      router.push(`/super-admin/configuration-admin/profile${idParam}`);
-      router.refresh();
+      await updateConfigAdmin(adminId, { [apiField]: finalValue });
+      // Update draft locally after successful API call
+      setDraftData(prev => ({ ...prev, [apiField]: value }));
+      toast.success(`${apiField.charAt(0).toUpperCase() + apiField.slice(1)} updated`);
     } catch (err: any) {
-      setSaveErr(err.message || 'Failed to save changes');
-    } finally {
-      setIsSubmitting(false);
+      throw new Error(err?.response?.data?.message || 'Failed to save changes');
     }
   };
-
-  const hasChanges = JSON.stringify(draftData) !== JSON.stringify(data);
 
   return (
     <PageWrapper>
@@ -381,7 +308,7 @@ export const ConfigAdminEditProfileView: React.FC<{ data: EditData; adminId: str
                 isEditing={activeField === 'name'}
                 onEditStart={() => setActiveField('name')}
                 onCancel={() => setActiveField(null)}
-                onValidate={validateField}
+                onValidate={validateConfigAdminField}
                 maxLength={50}
                 error={errors.name}
                 icon={User}
@@ -396,13 +323,9 @@ export const ConfigAdminEditProfileView: React.FC<{ data: EditData; adminId: str
                 isEditing={activeField === 'gender'}
                 onEditStart={() => setActiveField('gender')}
                 onCancel={() => setActiveField(null)}
-                onValidate={validateField}
+                onValidate={validateConfigAdminField}
                 type="select"
-                options={[
-                  { label: 'Male', value: 'MALE' },
-                  { label: 'Female', value: 'FEMALE' },
-                  { label: 'Other', value: 'OTHER' },
-                ]}
+                options={GENDER_OPTIONS}
                 error={errors.gender}
               />
               <EditableField
@@ -414,7 +337,7 @@ export const ConfigAdminEditProfileView: React.FC<{ data: EditData; adminId: str
                 isEditing={activeField === 'dateOfBirth'}
                 onEditStart={() => setActiveField('dateOfBirth')}
                 onCancel={() => setActiveField(null)}
-                onValidate={validateField}
+                onValidate={validateConfigAdminField}
                 error={errors.dateOfBirth}
               />
               <EditableField 
@@ -425,7 +348,7 @@ export const ConfigAdminEditProfileView: React.FC<{ data: EditData; adminId: str
                 isEditing={activeField === 'designation'}
                 onEditStart={() => setActiveField('designation')}
                 onCancel={() => setActiveField(null)}
-                onValidate={validateField}
+                onValidate={validateConfigAdminField}
                 maxLength={50}
                 error={errors.designation}
                 icon={Info}
@@ -433,28 +356,26 @@ export const ConfigAdminEditProfileView: React.FC<{ data: EditData; adminId: str
               <EditableField 
                 label="Mobile Number" 
                 value={draftData.mobileNumber} 
-                displayValue={formatMobile(draftData.mobileNumber)} 
+                displayValue={formatPhoneNumber(draftData.mobileNumber)} 
                 apiField="mobileNumber" 
                 onSave={saveField} 
                 isEditing={activeField === 'mobileNumber'}
                 onEditStart={() => setActiveField('mobileNumber')}
                 onCancel={() => setActiveField(null)}
-                onValidate={validateField}
-                maxLength={10}
+                onValidate={validateConfigAdminField}
                 error={errors.mobileNumber}
                 icon={Phone}
               />
               <EditableField 
                 label="Alternate Mobile" 
                 value={draftData.alternateMobileNumber} 
-                displayValue={formatMobile(draftData.alternateMobileNumber)} 
+                displayValue={formatPhoneNumber(draftData.alternateMobileNumber)} 
                 apiField="alternateMobileNumber" 
                 onSave={saveField} 
                 isEditing={activeField === 'alternateMobileNumber'}
                 onEditStart={() => setActiveField('alternateMobileNumber')}
                 onCancel={() => setActiveField(null)}
-                onValidate={validateField}
-                maxLength={10}
+                onValidate={validateConfigAdminField}
                 error={errors.alternateMobileNumber}
                 icon={Phone}
               />
@@ -466,7 +387,7 @@ export const ConfigAdminEditProfileView: React.FC<{ data: EditData; adminId: str
                 isEditing={activeField === 'email'}
                 onEditStart={() => setActiveField('email')}
                 onCancel={() => setActiveField(null)}
-                onValidate={validateField}
+                onValidate={validateConfigAdminField}
                 error={errors.email}
                 icon={Mail}
               />
@@ -480,8 +401,8 @@ export const ConfigAdminEditProfileView: React.FC<{ data: EditData; adminId: str
                   isEditing={activeField === 'remarks'}
                   onEditStart={() => setActiveField('remarks')}
                   onCancel={() => setActiveField(null)}
-                  onValidate={validateField}
-                  maxLength={200}
+                  onValidate={validateConfigAdminField}
+                  maxLength={300}
                   error={errors.remarks}
                   icon={Info}
                 />
@@ -490,36 +411,6 @@ export const ConfigAdminEditProfileView: React.FC<{ data: EditData; adminId: str
           </div>
         </div>
       </SectionCard>
-
-      {/* Floating Save Button */}
-      {hasChanges && (
-        <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[100] animate-in fade-in slide-in-from-bottom-10 duration-500">
-          <div className="bg-blue-600 rounded-[20px] p-1.5 flex items-center gap-1 shadow-2xl shadow-blue-900/30">
-            <button
-              onClick={() => {
-                setDraftData(data);
-                setActiveField(null);
-              }}
-              className="flex items-center gap-2 px-6 py-2.5 text-white/90 hover:text-white text-[13px] font-bold uppercase tracking-widest transition-colors"
-            >
-              <X size={16} strokeWidth={2.5} />
-              Cancel
-            </button>
-            <button
-              onClick={handleGlobalSave}
-              disabled={isSubmitting}
-              className="flex items-center gap-2 px-8 py-2.5 bg-white text-blue-600 rounded-[14px] text-[13px] font-black uppercase tracking-widest hover:bg-blue-50 transition-all active:scale-95 disabled:opacity-50 disabled:active:scale-100 shadow-sm"
-            >
-              {isSubmitting ? (
-                <span className="w-4 h-4 border-2 border-blue-600/30 border-t-blue-600 rounded-full animate-spin" />
-              ) : (
-                <Check size={16} strokeWidth={3} />
-              )}
-              {isSubmitting ? 'Saving...' : 'Save Changes'}
-            </button>
-          </div>
-        </div>
-      )}
     </PageWrapper>
   );
 };

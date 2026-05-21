@@ -72,24 +72,28 @@ export default function SuperAdminSidebar() {
   ], [base]);
 
   const filteredNavItems = useMemo(() => {
-    // 1. Dashboard: Always visible
     return navItems.filter((item) => {
+      // 1. Dashboard: Always visible
       if (item.id === 'dashboard') return true;
 
-      // 2. SUPER_ADMIN: Has access to everything except what might be specifically restricted
+      // 2. SUPER_ADMIN: Has access to everything
       if (isSuperAdmin) return true;
 
-      // 3. School Management:
-      // - Requires 'schools' READ permission
+      // 3. CONFIGURATION_ADMIN:
+      // - Sees 'Dashboard' (handled above)
+      // - Sees 'School' (explicitly allowed)
+      // - Does NOT see 'Configuration Admin'
+      if (isConfigAdmin) {
+        if (item.id === 'school') return true;
+        if (item.id === 'configuration-admin') return false;
+      }
+
+      // 4. Fallback for other potential roles or permission-based access
       if (item.id === 'school') {
         return hasPermission('schools', 'READ');
       }
 
-      // 4. Configuration Admin: 
-      // - Explicitly hidden for CONFIGURATION_ADMIN role
-      // - Otherwise, requires 'sub-admin' READ permission
       if (item.id === 'configuration-admin') {
-        if (isConfigAdmin) return false;
         return hasPermission('sub-admin', 'READ');
       }
 

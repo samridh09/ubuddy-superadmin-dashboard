@@ -22,11 +22,24 @@ function EditContent() {
 
     getConfigAdminById(adminId)
       .then((admin) => {
+        // Convert dd-mm-yyyy to yyyy-mm-dd for DateInput component
+        let isoDOB = '';
+        if (admin.date_of_birth && admin.date_of_birth.includes('-')) {
+          const parts = admin.date_of_birth.split('-');
+          if (parts.length === 3) {
+            if (parts[0].length === 4) {
+              isoDOB = admin.date_of_birth; // Already ISO
+            } else {
+              isoDOB = `${parts[2]}-${parts[1]}-${parts[0]}`;
+            }
+          }
+        }
+
         setData({
           name: admin.full_name || admin.username,
           username: admin.username,
           gender: admin.gender,
-          dateOfBirth: admin.date_of_birth || '',
+          dateOfBirth: isoDOB,
           designation: admin.designation || '',
           mobileNumber: admin.mobile_number || '',
           alternateMobileNumber: admin.alternate_mobile || '',

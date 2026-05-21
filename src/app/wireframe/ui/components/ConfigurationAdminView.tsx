@@ -331,8 +331,6 @@ export const ConfigurationAdminView: React.FC<{ wireframe?: boolean }> = ({ wire
                         <DropdownMenu ref={actionMenuRef} className={`absolute right-0 ${index >= filtered.length - 2 ? 'bottom-[calc(100%+8px)]' : 'top-[calc(100%+8px)]'} z-[100]`}>
                           <DropdownMenuItem onClick={() => { setOpenActionId(null); router.push(`${base}/configuration-admin/profile?adminId=${row.id}`); }}>View Profile</DropdownMenuItem>
                           <DropdownMenuDivider />
-                          <DropdownMenuItem onClick={() => { setOpenActionId(null); router.push(`${base}/configuration-admin/permissions?adminId=${row.id}`); }}>Permissions</DropdownMenuItem>
-                          <DropdownMenuDivider />
                           <DropdownMenuItem onClick={() => { setOpenActionId(null); router.push(`${base}/configuration-admin/assign-schools?adminId=${row.id}`); }}>Assign Schools</DropdownMenuItem>
                         </DropdownMenu>
                       )}
