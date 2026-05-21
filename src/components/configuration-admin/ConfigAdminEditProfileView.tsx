@@ -247,7 +247,7 @@ export const ConfigAdminEditProfileView: React.FC<{ data: any; adminId: string }
     try {
       await updateConfigAdmin(adminId, { [apiField]: finalValue });
       // Update draft locally after successful API call
-      setDraftData(prev => ({ ...prev, [apiField]: value }));
+      setDraftData((prev: any) => ({ ...prev, [apiField]: value }));
       toast.success(`${apiField.charAt(0).toUpperCase() + apiField.slice(1)} updated`);
     } catch (err: any) {
       throw new Error(err?.response?.data?.message || 'Failed to save changes');
