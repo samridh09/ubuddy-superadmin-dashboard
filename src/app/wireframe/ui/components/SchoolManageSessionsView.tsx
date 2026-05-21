@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useBasePath } from './use-base-path';
-import { Eye, Lock, Plus, Calendar, Trash2, X, ChevronDown } from 'lucide-react';
+import { Eye, Lock, Plus, Calendar, Trash2, X } from 'lucide-react';
 import { DateInput } from '@/components/ui/date-input';
 import {
   PageWrapper, PageHeader, FilterBox, PrimaryButton, SecondaryButton,
@@ -26,21 +26,8 @@ export const SchoolManageSessionsView: React.FC<SchoolManageSessionsViewProps> =
   const [sessions, setSessions] = useState<SchoolSession[]>(initialSessions);
   const [selectedSessionTemplate, setSelectedSessionTemplate] = useState('2025-2026');
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
-
-  React.useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as HTMLElement;
-      if (!target.closest('.configure-dropdown-container')) {
-        setOpenDropdown(null);
-      }
-    };
-    
-    document.addEventListener('click', handleClickOutside);
-    return () => document.removeEventListener('click', handleClickOutside);
-  }, []);
 
   return (
     <PageWrapper>
@@ -109,7 +96,7 @@ export const SchoolManageSessionsView: React.FC<SchoolManageSessionsViewProps> =
           </THead>
           <TBody>
             {sessions.map((session, index) => (
-              <Tr key={session.id} index={index} className={openDropdown === session.id ? 'relative z-50' : ''}>
+              <Tr key={session.id} index={index}>
                 <Td className="pl-12">
                   <span className="text-[13px] font-semibold text-gray-400">
                     {index + 1}
@@ -126,58 +113,14 @@ export const SchoolManageSessionsView: React.FC<SchoolManageSessionsViewProps> =
                   </span>
                 </Td>
                 <Td align="center">
-                  {user?.role === 'CONFIGURATION_ADMIN' ? (
-                    <div className="flex items-center justify-center">
-                      <button
-                        onClick={() => router.push(`${base}/school/manage-sessions/basic?schoolId=${schoolId}&sessionId=${session.id}`)}
-                        className="inline-flex items-center px-6 py-2.5 bg-white border-2 border-gray-100 hover:border-blue-400 text-blue-900 text-[12px] font-bold rounded-xl transition-all duration-300 active:scale-95 shadow-none"
-                      >
-                        Basic configuration
-                      </button>
-                    </div>
-                  ) : (
-                    <div className={`relative flex items-center justify-center configure-dropdown-container ${openDropdown === session.id ? 'z-[60]' : 'z-0'}`}>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setOpenDropdown(openDropdown === session.id ? null : session.id);
-                        }}
-                        className={`inline-flex items-center gap-2 px-6 py-2.5 bg-white border-2 text-[12px] font-bold rounded-xl transition-all duration-300 active:scale-95 shadow-none ${
-                          openDropdown === session.id ? 'border-blue-500 text-blue-600' : 'border-gray-100 hover:border-blue-400 text-blue-900'
-                        }`}
-                      >
-                        Configure
-                        <ChevronDown size={14} className={`transition-transform duration-200 ${openDropdown === session.id ? 'rotate-180' : ''}`} />
-                      </button>
-
-                      {openDropdown === session.id && (
-                        <div
-                          onClick={(e) => e.stopPropagation()}
-                          className="absolute top-full mt-2 right-0 z-50 w-52 bg-white border border-gray-100 rounded-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150"
-                        >
-                          <button
-                            onClick={() => {
-                              setOpenDropdown(null);
-                              router.push(`${base}/school/manage-sessions/basic?schoolId=${schoolId}&sessionId=${session.id}`);
-                            }}
-                            className="w-full flex items-center px-5 py-3.5 text-[12px] font-bold text-blue-900 hover:bg-gray-50 transition-colors text-left"
-                          >
-                            Basic configuration
-                          </button>
-                          <div className="h-px bg-gray-50 mx-3" />
-                          <button
-                            onClick={() => {
-                              setOpenDropdown(null);
-                              router.push(`${base}/school/manage-sessions/module?schoolId=${schoolId}&sessionId=${session.id}`);
-                            }}
-                            className="w-full flex items-center px-5 py-3.5 text-[12px] font-bold text-blue-900 hover:bg-gray-50 transition-colors text-left"
-                          >
-                            module configuration
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  )}
+                  <div className="flex items-center justify-center">
+                    <button
+                      onClick={() => router.push(`${base}/school/manage-sessions/configure?schoolId=${schoolId}&sessionId=${session.id}`)}
+                      className="inline-flex items-center px-8 py-2.5 bg-white border-2 border-gray-100 hover:border-blue-400 text-blue-900 text-[12px] font-bold rounded-xl transition-all duration-300 active:scale-95 shadow-none"
+                    >
+                      Configure
+                    </button>
+                  </div>
                 </Td>
                 <Td></Td>
               </Tr>

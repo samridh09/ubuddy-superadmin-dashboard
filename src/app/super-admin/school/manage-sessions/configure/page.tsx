@@ -2,15 +2,15 @@
 
 import React, { Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { SchoolBasicConfigView } from '../../../../wireframe/ui/components/SchoolBasicConfigView';
+import { SchoolConfigureView } from '../../../../wireframe/ui/components/SchoolConfigureView';
 
-function BasicConfigContent() {
+function ConfigureContent() {
   const searchParams = useSearchParams();
   const schoolId = searchParams.get('schoolId') || '';
   const sessionId = searchParams.get('sessionId') || '';
 
   return (
-    <SchoolBasicConfigView
+    <SchoolConfigureView
       schoolName="Nishu International School"
       sessionYear="2025-2026"
       schoolId={schoolId}
@@ -19,10 +19,10 @@ function BasicConfigContent() {
   );
 }
 
-export default function BasicConfigPage() {
+export default function ConfigurePage() {
   return (
     <Suspense>
-      <BasicConfigContent />
+      <ConfigureContent />
     </Suspense>
   );
 }
