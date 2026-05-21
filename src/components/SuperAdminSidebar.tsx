@@ -1,0 +1,204 @@
+'use client';
+
+import { useRouter, usePathname } from 'next/navigation';
+import { useState, useEffect, useMemo } from 'react';
+import {
+  LogOut,
+  LayoutDashboard,
+  School,
+  UserCog,
+  HelpCircle,
+  type LucideIcon
+} from 'lucide-react';
+import { useAuth } from '@/providers/auth-provider';
+import { NavItem } from "@/types/components/SuperAdminSidebar";
+import { fetchWithAuth } from '@/lib/api-client';
+import { API_ENDPOINTS, handleApiError } from '@/lib/api';
+
+const ICON_MAP: Record<string, LucideIcon> = {
+  LayoutDashboard,
+  School,
+  UserCog,
+};
+
+export default function SuperAdminSidebar() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const { logout } = useAuth();
+  
+  const [isCollapsed, setIsCollapsed] = useState(true);
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
+  const [navItems, setNavItems] = useState<NavItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const isWireframe = pathname.startsWith('/wireframes/ui');
+  const base = isWireframe ? '/wireframes/ui' : '/super-admin';
+
+  useEffect(() => {
+    const fetchSidebar = async () => {
+      try {
+        setIsLoading(true);
+        const response = await fetchWithAuth(API_ENDPOINTS.admin.sidebar);
+        if (!response.ok) {
+          await handleApiError(response, 'Failed to fetch sidebar');
+        }
+        const result = await response.json();
+        
+        if (result.success && Array.isArray(result.data)) {
+          const mappedItems: NavItem[] = result.data.map((item: any) => {
+            // Adjust route if in wireframe mode
+            let route = item.route;
+            if (isWireframe) {
+              route = route.replace('/super-admin', '/wireframes/ui');
+            }
+
+            return {
+              id: item.id,
+              name: item.name,
+              route: route,
+              icon: ICON_MAP[item.icon] || HelpCircle
+            };
+          });
+          setNavItems(mappedItems);
+        }
+      } catch (error) {
+        console.error('Error fetching sidebar:', error);
+        // Fallback to static items if API fails or for development
+        const fallbackItems: NavItem[] = [
+          { id: 'dashboard',            name: 'Dashboard',            route: base,                              icon: LayoutDashboard },
+          { id: 'school',               name: 'School',               route: `${base}/school`,               icon: School },
+          { id: 'configuration-admin',  name: 'Configuration Admin',  route: `${base}/configuration-admin`,  icon: UserCog },
+        ];
+        setNavItems(fallbackItems);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchSidebar();
+  }, [base, isWireframe]);
+
+  const renderNavItem = (item: NavItem) => {
+    const Icon = item.icon;
+    const isActive = pathname === item.route || (item.id !== 'dashboard' && pathname.startsWith(item.route));
+    
+    return (
+      <div key={item.id}>
+        <button
+          onClick={() => router.push(item.route)}
+          title={isCollapsed ? item.name : undefined}
+          className={`w-full group flex items-center ${isCollapsed ? 'justify-center px-0' : 'px-6'} py-2.5 rounded-lg transition-all duration-200 border-none cursor-pointer ${
+            isActive
+              ? 'bg-blue-600/10 text-blue-700 font-bold'
+              : 'text-gray-500 hover:bg-blue-50 hover:text-blue-900'
+          }`}
+        >
+          <Icon
+            size={18}
+            className={`shrink-0 transition-colors duration-200 ${
+              isActive ? 'text-blue-500' : 'text-gray-400 group-hover:text-blue-500'
+            } ${isCollapsed ? '' : 'mr-4'}`}
+          />
+          {!isCollapsed && (
+            <span className={`text-[12px] font-bold whitespace-nowrap overflow-hidden text-left flex-1 tracking-tight ${isActive ? 'text-blue-700' : ''}`}>
+              {item.name.toUpperCase()}
+            </span>
+          )}
+        </button>
+      </div>
+    );
+  };
+
+  return (
+    <>
+      <aside
+        onMouseEnter={() => setIsCollapsed(false)}
+        onMouseLeave={() => setIsCollapsed(true)}
+        className={`${isCollapsed ? 'w-16' : 'w-[280px]'} h-screen bg-white flex flex-col shrink-0 transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] relative z-[100] overflow-hidden border-r border-gray-100 shadow-sm`}
+      >
+        <div className={`h-16 ${isCollapsed ? 'justify-center border-none' : 'px-8 justify-start'} flex items-center shrink-0 border-b border-gray-50`}>
+          {!isCollapsed ? (
+            <h1 className="font-extrabold text-blue-900 text-[15px] tracking-[0.2em] uppercase animate-in fade-in slide-in-from-left-4 duration-700">
+              UBUDDY
+            </h1>
+          ) : (
+            <div className="w-9 h-9 bg-blue-600/10 rounded-xl flex items-center justify-center shrink-0 border border-blue-500/20 animate-in fade-in zoom-in duration-500">
+              <span className="text-blue-500 font-black text-base">U</span>
+            </div>
+          )}
+        </div>
+
+        <div className="flex-1 overflow-y-auto pt-4 px-0 space-y-0.5 scrollbar-custom border-none">
+          <div className="px-2 space-y-0.5">
+            {isLoading ? (
+              <div className="space-y-2 px-2">
+                {[1, 2, 3].map((i) => (
+                  <div
+                    key={i}
+                    className={`w-full flex items-center ${isCollapsed ? 'justify-center' : 'px-4'} py-2.5 rounded-lg animate-pulse`}
+                  >
+                    <div className={`shrink-0 bg-gray-200 rounded-md ${isCollapsed ? 'w-5 h-5' : 'w-5 h-5 mr-4'}`} />
+                    {!isCollapsed && (
+                      <div className="h-3 bg-gray-200 rounded-md flex-1" />
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              navItems.map((item) => renderNavItem(item))
+            )}
+          </div>
+        </div>
+
+        <div className="p-4 bg-gray-50/50 border-t border-gray-100">
+          <button
+            onClick={() => setIsLogoutModalOpen(true)}
+            className={`w-full flex items-center gap-3 ${isCollapsed ? 'justify-center py-3' : 'px-6 py-3.5'} rounded-xl bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all duration-300 group active:scale-95`}
+          >
+            <LogOut size={isCollapsed ? 20 : 18} className="group-hover:rotate-12 transition-transform" />
+            {!isCollapsed && <span className="text-[12px] font-bold uppercase tracking-widest">Sign Out</span>}
+          </button>
+        </div>
+      </aside>
+
+      {/* Logout Modal */}
+      {isLogoutModalOpen && (
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-blue-950/60 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="bg-white rounded-[32px] p-10 w-[420px] shadow-2xl border border-neutral-100 flex flex-col items-center text-center animate-in zoom-in-95 duration-500">
+            <div className="w-20 h-20 bg-red-50 rounded-3xl flex items-center justify-center mb-6 text-red-500 shadow-inner">
+              <LogOut size={40} strokeWidth={2.5} />
+            </div>
+            <h3 className="text-2xl font-black text-blue-900 mb-3 tracking-tight">Confirm Sign Out</h3>
+            <p className="text-gray-500 text-[15px] font-bold leading-relaxed mb-8 px-4">
+              Are you sure you want to end your session? You will be redirected to the login page.
+            </p>
+            <div className="flex flex-col w-full gap-3">
+              <button
+                onClick={() => { setIsLogoutModalOpen(false); logout(); router.push('/'); }}
+                className="w-full py-4 bg-red-500 text-white rounded-2xl font-black text-[14px] uppercase tracking-widest shadow-lg shadow-red-500/20 hover:bg-red-600 active:scale-95 transition-all"
+              >
+                Yes, Sign Out
+              </button>
+              <button
+                onClick={() => setIsLogoutModalOpen(false)}
+                className="w-full py-4 bg-gray-50 text-gray-400 rounded-2xl font-black text-[14px] uppercase tracking-widest hover:bg-gray-100 active:scale-95 transition-all"
+              >
+                No, Stay Logged In
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <style jsx global>{`
+        .scrollbar-custom::-webkit-scrollbar { width: 12px; height: 12px; }
+        .scrollbar-custom::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.01); }
+        .scrollbar-custom::-webkit-scrollbar-thumb { background: rgba(0, 0, 0, 0.25); border-radius: 20px; border: 3px solid transparent; background-clip: content-box; }
+        .scrollbar-custom::-webkit-scrollbar-thumb:hover { background: rgba(0, 0, 0, 0.35); }
+        aside .scrollbar-custom::-webkit-scrollbar { width: 6px; }
+        aside .scrollbar-custom::-webkit-scrollbar-thumb { background: rgba(0, 0, 0, 0.15); }
+        aside .scrollbar-custom::-webkit-scrollbar-thumb:hover { background: rgba(0, 0, 0, 0.25); }
+      `}</style>
+    </>
+  );
+}
