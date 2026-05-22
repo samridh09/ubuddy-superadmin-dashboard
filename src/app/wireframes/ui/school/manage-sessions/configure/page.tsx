@@ -2,7 +2,7 @@
 
 import React, { Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { SchoolConfigureView } from '../../../../wireframe/ui/components/SchoolConfigureView';
+import { SchoolConfigureView } from '@/app/wireframe/ui/components/SchoolConfigureView';
 
 function ConfigureContent() {
   const searchParams = useSearchParams();

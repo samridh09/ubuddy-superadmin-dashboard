@@ -91,7 +91,7 @@ export const SchoolManageSessionsView: React.FC<SchoolManageSessionsViewProps> =
             <Th width="w-[120px]" className="pl-12">S. No.</Th>
             <Th width="w-[300px]">Academic Year</Th>
             <Th width="w-[500px]">Session Dates</Th>
-            <Th width="w-[180px]" align="center">Actions</Th>
+            <Th width="w-[280px]" align="center">Actions</Th>
             <Th className="w-full"></Th>
           </THead>
           <TBody>
@@ -113,12 +113,19 @@ export const SchoolManageSessionsView: React.FC<SchoolManageSessionsViewProps> =
                   </span>
                 </Td>
                 <Td align="center">
-                  <div className="flex items-center justify-center">
+                  <div className="flex items-center justify-center gap-3">
                     <button
                       onClick={() => router.push(`${base}/school/manage-sessions/configure?schoolId=${schoolId}&sessionId=${session.id}`)}
                       className="inline-flex items-center px-8 py-2.5 bg-white border-2 border-gray-100 hover:border-blue-400 text-blue-900 text-[12px] font-bold rounded-xl transition-all duration-300 active:scale-95 shadow-none"
                     >
                       Configure
+                    </button>
+                    <button
+                      onClick={() => router.push(`${base}/school/manage-sessions/configure?schoolId=${schoolId}&sessionId=${session.id}&view=true`)}
+                      className="inline-flex items-center gap-1.5 px-8 py-2.5 bg-white border-2 border-gray-100 hover:border-blue-400 text-blue-900 text-[12px] font-bold rounded-xl transition-all duration-300 active:scale-95 shadow-none"
+                    >
+                      <Eye size={14} />
+                      View
                     </button>
                   </div>
                 </Td>

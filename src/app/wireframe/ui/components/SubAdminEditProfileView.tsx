@@ -6,6 +6,7 @@ import { User, Check, X, Upload, Edit2, Mail, Phone, Calendar, Info, History } f
 import { PageWrapper, PageHeader, SectionCard, SectionHeading, ErrorBanner } from './ui';
 import { FormSelect } from '@/components/ui/form-select';
 import { DateInput, formatDateDisplay } from '@/components/ui/date-input';
+import { formatToApiDate } from '@/utils/date';
 import { API_ENDPOINTS } from '@/lib/api';
 import apiClient from '@/lib/axios';
 import { SubAdminEditData } from '@/types';
@@ -289,12 +290,7 @@ export const SubAdminEditProfileView: React.FC<{ data: SubAdminEditData; adminId
         if (isChanged) {
           hasChanges = true;
           if (key === 'dateOfBirth' && val) {
-            if (val.includes('/')) {
-              const [dd, mm, yyyy] = val.split('/');
-              fd.append('dateOfBirth', `${dd}-${mm}-${yyyy}`);
-            } else {
-              fd.append('dateOfBirth', val);
-            }
+            fd.append('dateOfBirth', formatToApiDate(val));
           } else {
             fd.append(key, val as string);
           }

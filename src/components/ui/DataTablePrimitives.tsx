@@ -32,11 +32,14 @@ export const TBody: React.FC<{ children: React.ReactNode; className?: string }> 
   <tbody className={`divide-y divide-gray-50 ${className}`}>{children}</tbody>
 );
 
-export const Tr: React.FC<{ children: React.ReactNode; className?: string; index?: number }> = ({ children, className = '', index }) => (
-  <tr className={`hover:bg-blue-50/30 transition-colors group ${className}`}>
-    {children}
-  </tr>
+export const Tr = React.forwardRef<HTMLTableRowElement, { children: React.ReactNode; className?: string; index?: number } & React.HTMLAttributes<HTMLTableRowElement>>(
+  ({ children, className = '', index, ...rest }, ref) => (
+    <tr ref={ref} {...rest} className={`hover:bg-blue-50/30 transition-colors group ${className}`}>
+      {children}
+    </tr>
+  )
 );
+Tr.displayName = 'Tr';
 /** Standard sortable (or static) table header cell - keeps gray-400 text color */
 export const Th: React.FC<ThProps> = ({
   children,

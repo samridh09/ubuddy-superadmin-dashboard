@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { SchoolViewProfile } from '../../../../wireframe/ui/components/SchoolViewProfile';
 import { getSchoolById } from '@/lib/services/school-service';
+import { formatToDisplayDate } from '@/utils/date';
 
 function capitalize(str?: string) {
   if (!str) return '';
@@ -30,10 +31,10 @@ export default function ViewSchoolPage() {
           status: school.status === 'ACTIVE' ? 'Active' : 'Inactive',
           principalName: school.principal_name ?? '',
           principalGender: capitalize(school.principal_gender),
-          principalDob: school.principal_dob ?? '',
+          principalDob: formatToDisplayDate(school.principal_dob ?? ''),
           directorName: school.director_name ?? '',
           directorGender: capitalize(school.director_gender),
-          directorDob: school.director_dob ?? '',
+          directorDob: formatToDisplayDate(school.director_dob ?? ''),
           address: [school.address.street, school.address.city, school.address.state, school.address.zipCode].filter(Boolean).join(', '),
           city: school.address.city,
           state: school.address.state,
@@ -48,7 +49,7 @@ export default function ViewSchoolPage() {
             id: poc.id,
             name: poc.name,
             gender: capitalize(poc.gender),
-            dob: poc.date_of_birth,
+            dob: formatToDisplayDate(poc.date_of_birth),
             designation: poc.designation,
             contactNumber: poc.primary_contact_number,
             alternateNumber: poc.alternate_contact_number ?? undefined,

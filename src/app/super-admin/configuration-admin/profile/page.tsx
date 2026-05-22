@@ -4,6 +4,7 @@ import React, { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { SubAdminProfileView } from '@/app/wireframe/ui/components/SubAdminProfileView';
 import { getConfigAdminById, ConfigAdmin } from '@/lib/services/config-admin-service';
+import { ensureIsoDate } from '@/utils/date';
 
 function capitalize(s?: string) {
   if (!s) return '';
@@ -42,7 +43,7 @@ function ProfileContent() {
           status: mapStatus(admin.status),
           avatar: admin.profile_photo || undefined,
           gender: capitalize(admin.gender),
-          dateOfBirth: admin.date_of_birth || '',
+          dateOfBirth: ensureIsoDate(admin.date_of_birth || ''),
           designation: admin.designation || '',
           mobileNumber: admin.mobile_number || '',
           alternateMobileNumber: admin.alternate_mobile || '',

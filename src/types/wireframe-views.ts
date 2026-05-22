@@ -133,6 +133,27 @@ export interface SchoolBasicConfigViewProps {
   sessionId: string;
 }
 
+export interface SchoolClassSectionViewProps {
+  schoolName: string;
+  sessionYear: string;
+  schoolId: string;
+  sessionId: string;
+}
+
+export interface SchoolSubjectViewProps {
+  schoolName: string;
+  sessionYear: string;
+  schoolId: string;
+  sessionId: string;
+}
+
+export interface SchoolTermsViewProps {
+  schoolName: string;
+  sessionYear: string;
+  schoolId: string;
+  sessionId: string;
+}
+
 export interface SchoolResultConfigViewProps {
   schoolName: string;
   schoolId: string;

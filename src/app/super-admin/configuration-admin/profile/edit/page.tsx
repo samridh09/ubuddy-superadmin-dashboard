@@ -4,6 +4,7 @@ import React, { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { ConfigAdminEditProfileView } from '@/components/configuration-admin/ConfigAdminEditProfileView';
 import { getConfigAdminById } from '@/lib/services/config-admin-service';
+import { ensureIsoDate } from '@/utils/date';
 
 function EditContent() {
   const searchParams = useSearchParams();
@@ -22,18 +23,7 @@ function EditContent() {
 
     getConfigAdminById(adminId)
       .then((admin) => {
-        // Convert dd-mm-yyyy to yyyy-mm-dd for DateInput component
-        let isoDOB = '';
-        if (admin.date_of_birth && admin.date_of_birth.includes('-')) {
-          const parts = admin.date_of_birth.split('-');
-          if (parts.length === 3) {
-            if (parts[0].length === 4) {
-              isoDOB = admin.date_of_birth; // Already ISO
-            } else {
-              isoDOB = `${parts[2]}-${parts[1]}-${parts[0]}`;
-            }
-          }
-        }
+        const isoDOB = ensureIsoDate(admin.date_of_birth ?? '');
 
         setData({
           name: admin.full_name || admin.username,

@@ -14,8 +14,6 @@ const BASIC_CONFIG_ITEMS: BasicConfigItem[] = [
   { id: '1', name: 'Class & Section', route: 'class' },
   { id: '2', name: 'Subject', route: 'subject' },
   { id: '3', name: 'Terms', route: 'terms' },
-  { id: '4', name: 'Student Form', route: 'student-form' },
-  { id: '5', name: 'Staff Form', route: 'staff-form' },
 ];
 
 const MODULE_CONFIG_ITEMS: ModuleConfigItem[] = [
@@ -24,11 +22,12 @@ const MODULE_CONFIG_ITEMS: ModuleConfigItem[] = [
   { id: '3', name: 'Transfer Certificate', route: 'transfer-certificate' },
 ];
 
-export const SchoolConfigureView: React.FC<SchoolBasicConfigViewProps> = ({ 
+export const SchoolConfigureView: React.FC<SchoolBasicConfigViewProps & { isViewMode?: boolean }> = ({ 
   schoolName, 
   sessionYear, 
   schoolId, 
-  sessionId 
+  sessionId,
+  isViewMode = false
 }) => {
   const router = useRouter();
   const { user } = useAuth();
@@ -40,14 +39,14 @@ export const SchoolConfigureView: React.FC<SchoolBasicConfigViewProps> = ({
 
   const allItems = [
     ...displayedBasicItems.map(item => ({ ...item, section: 'Basic', icon: <Eye size={18} />, link: `${base}/school/manage-sessions/basic/${item.route}` })),
-    ...MODULE_CONFIG_ITEMS.map(item => ({ ...item, section: 'Module', icon: <Pencil size={18} />, link: `${base}/school/manage-sessions/module/${item.route}` }))
+    ...MODULE_CONFIG_ITEMS.map(item => ({ ...item, section: 'Module', icon: isViewMode ? <Eye size={18} /> : <Pencil size={18} />, link: `${base}/school/manage-sessions/module/${item.route}` }))
   ];
 
   return (
     <PageWrapper>
       {/* Header */}
       <PageHeader
-        title={`${schoolName} | Configure`}
+        title={isViewMode ? `${schoolName} | View` : `${schoolName} | Configure`}
         subtitle={`${schoolName} | ${sessionYear}`}
         showBack
         onBack={() => router.push(`${base}/school/manage-sessions?schoolId=${schoolId}`)}
@@ -72,7 +71,7 @@ export const SchoolConfigureView: React.FC<SchoolBasicConfigViewProps> = ({
                 <Td align="center" className="py-8">
                   <IconButton 
                     variant="blue"
-                    onClick={() => router.push(`${item.link}?schoolId=${schoolId}&sessionId=${sessionId}`)}
+                    onClick={() => router.push(`${item.link}?schoolId=${schoolId}&sessionId=${sessionId}${isViewMode ? '&view=true' : ''}`)}
                   >
                     {item.icon}
                   </IconButton>

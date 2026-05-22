@@ -14,8 +14,6 @@ const CONFIG_ITEMS: BasicConfigItem[] = [
   { id: '1', name: 'Class & Section', route: 'class' },
   { id: '2', name: 'Subject', route: 'subject' },
   { id: '3', name: 'Terms', route: 'terms' },
-  { id: '4', name: 'Student Form', route: 'student-form' },
-  { id: '5', name: 'Staff Form', route: 'staff-form' },
 ];
 
 export const SchoolBasicConfigView: React.FC<SchoolBasicConfigViewProps> = ({ 
