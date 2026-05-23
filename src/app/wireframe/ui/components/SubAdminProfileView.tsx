@@ -20,7 +20,7 @@ function formatDob(iso: string): string {
   if (!iso) return '';
   try {
     const d = parseISO(iso);
-    return isValid(d) ? format(d, 'dd/MM/yyyy') : iso;
+    return isValid(d) ? format(d, 'dd-MM-yyyy') : iso;
   } catch { return iso; }
 }
 

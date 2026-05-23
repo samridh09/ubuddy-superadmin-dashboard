@@ -23,7 +23,7 @@ export function DatePicker({
   error = false,
   disabled,
   defaultMonth,
-  displayFormat = "dd/MM/yyyy",
+  displayFormat = "dd-MM-yyyy",
 }: DatePickerProps) {
   const [open, setOpen] = useState(false)
 

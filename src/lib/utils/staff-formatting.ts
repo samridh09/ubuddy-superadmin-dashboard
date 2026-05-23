@@ -19,23 +19,23 @@ export const formatMobileNumber = (value: string): string => {
 };
 
 /**
- * Format date input with slashes (01/01/2001)
+ * Format date input with hyphens (01-01-2001)
  * Used for manual typing in text inputs
  */
 export const formatDateInput = (value: string): string => {
   // Remove all non-digits
   const digits = value.replace(/\D/g, '');
   
-  // Apply formatting for date (DD/MM/YYYY)
+  // Apply formatting for date (DD-MM-YYYY)
   if (digits.length <= 2) {
     return digits;
   } else if (digits.length <= 4) {
-    return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+    return `${digits.slice(0, 2)}-${digits.slice(2)}`;
   } else if (digits.length <= 8) {
-    return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4, 8)}`;
+    return `${digits.slice(0, 2)}-${digits.slice(2, 4)}-${digits.slice(4, 8)}`;
   }
   
-  return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4, 8)}`;
+  return `${digits.slice(0, 2)}-${digits.slice(2, 4)}-${digits.slice(4, 8)}`;
 };
 
 /**
@@ -230,7 +230,7 @@ export const formatFileSize = (bytes: number): string => {
 };
 
 /**
- * Format date to display format
+ * Format date to display format (DD-MM-YYYY)
  */
 export const formatDateDisplay = (dateString?: string): string => {
   if (!dateString) return 'N/A';
@@ -239,21 +239,21 @@ export const formatDateDisplay = (dateString?: string): string => {
     const date = new Date(dateString);
     if (isNaN(date.getTime())) return 'N/A';
     
-    return date.toLocaleDateString('en-IN', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    });
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    
+    return `${day}-${month}-${year}`;
   } catch {
     return 'N/A';
   }
 };
 
 /**
- * Convert date from DD/MM/YYYY to YYYY-MM-DD (for input[type="date"])
+ * Convert date from DD-MM-YYYY to YYYY-MM-DD (for input[type="date"])
  */
 export const convertToInputDate = (displayDate: string): string => {
-  const parts = displayDate.split('/');
+  const parts = displayDate.split('-');
   if (parts.length !== 3) return '';
   
   const [day, month, year] = parts;
@@ -261,7 +261,7 @@ export const convertToInputDate = (displayDate: string): string => {
 };
 
 /**
- * Convert date from YYYY-MM-DD to DD/MM/YYYY (for display)
+ * Convert date from YYYY-MM-DD to DD-MM-YYYY (for display)
  */
 export const convertFromInputDate = (inputDate: string): string => {
   if (!inputDate) return '';
@@ -269,5 +269,5 @@ export const convertFromInputDate = (inputDate: string): string => {
   if (parts.length !== 3) return '';
   
   const [year, month, day] = parts;
-  return `${day}/${month}/${year}`;
+  return `${day}-${month}-${year}`;
 };

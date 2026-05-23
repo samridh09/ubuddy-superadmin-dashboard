@@ -7,13 +7,13 @@ export function ensureIsoDate(d?: string): string {
   return d;
 }
 
-/** Format any date string to dd/mm/yyyy display format */
+/** Format any date string to dd-mm-yyyy display format */
 export function formatToDisplayDate(d?: string): string {
   if (!d) return '';
   const iso = ensureIsoDate(d);
   const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})$/);
   if (!m) return d;
-  return `${m[3]}/${m[2]}/${m[1]}`;
+  return `${m[3]}-${m[2]}-${m[1]}`;
 }
 
 /** Format any date to dd-mm-yyyy for API payload */

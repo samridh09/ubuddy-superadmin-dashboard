@@ -18,6 +18,7 @@ import { useRouter } from 'next/navigation';
 import { useBasePath } from './use-base-path';
 import { PageWrapper, PrimaryButton } from './ui';
 import { SchoolViewProfilePOC, SchoolProfileViewData, SchoolViewProfileProps } from '@/types';
+import { formatToDisplayDate } from '@/utils/date';
 
 function Field({ label, value }: { label: string; value?: string }) {
   const empty = !value;
@@ -131,12 +132,12 @@ export const SchoolViewProfile: React.FC<SchoolViewProfileProps> = ({ data }) =>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-x-12 gap-y-4">
             <Field label="Principal Name" value={data.principalName} />
             <Field label="Principal Gender" value={data.principalGender} />
-            <Field label="Principal DOB" value={data.principalDob} />
+            <Field label="Principal DOB" value={formatToDisplayDate(data.principalDob)} />
           </div>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-x-12 gap-y-4">
             <Field label="Director Name" value={data.directorName} />
             <Field label="Director Gender" value={data.directorGender} />
-            <Field label="Director DOB" value={data.directorDob} />
+            <Field label="Director DOB" value={formatToDisplayDate(data.directorDob)} />
           </div>
         </div>
 
@@ -179,7 +180,7 @@ export const SchoolViewProfile: React.FC<SchoolViewProfileProps> = ({ data }) =>
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-x-10 gap-y-4">
                     <Field label="Name" value={poc.name} />
                     <Field label="Gender" value={poc.gender ? poc.gender.charAt(0) + poc.gender.slice(1).toLowerCase() : ''} />
-                    <Field label="Date of Birth" value={poc.dob} />
+                    <Field label="Date of Birth" value={formatToDisplayDate(poc.dob)} />
                     <Field label="Designation" value={poc.designation} />
                     <Field label="Contact" value={formatPhone(poc.contactNumber)} />
                     <Field label="Alternate Contact" value={formatPhone(poc.alternateNumber || '')} />
