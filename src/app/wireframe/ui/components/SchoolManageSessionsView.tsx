@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/dialog';
 import { SchoolSession, SchoolManageSessionsViewProps } from '@/types';
 import { useAuth } from '@/providers/auth-provider';
+import { formatToDisplayDate } from '@/utils/date';
 
 export const SchoolManageSessionsView: React.FC<SchoolManageSessionsViewProps> = ({ schoolName, initialSessions, schoolId }) => {
   const router = useRouter();
@@ -109,7 +110,7 @@ export const SchoolManageSessionsView: React.FC<SchoolManageSessionsViewProps> =
                 </Td>
                 <Td>
                   <span className="text-[13px] font-semibold text-gray-500 whitespace-nowrap">
-                    {session.startDate} — {session.endDate}
+                    {formatToDisplayDate(session.startDate)} — {formatToDisplayDate(session.endDate)}
                   </span>
                 </Td>
                 <Td align="center">

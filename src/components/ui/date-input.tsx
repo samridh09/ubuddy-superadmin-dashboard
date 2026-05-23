@@ -20,7 +20,7 @@ function buildDisplay(slots: string[]): string {
   const dd   = (slots[0] || '_') + (slots[1] || '_');
   const mm   = (slots[2] || '_') + (slots[3] || '_');
   const yyyy = (slots[4] || '_') + (slots[5] || '_') + (slots[6] || '_') + (slots[7] || '_');
-  return `${dd}/${mm}/${yyyy}`;
+  return `${dd}-${mm}-${yyyy}`;
 }
 
 function slotsToISO(slots: string[]): string {
@@ -61,7 +61,7 @@ export function DateInput({
   value,
   onChange,
   onBlur,
-  placeholder = 'DD/MM/YYYY',
+  placeholder = 'DD-MM-YYYY',
   error = false,
   className,
   compact = false,
@@ -207,5 +207,5 @@ export function formatDateDisplay(iso: string): string {
   if (!iso) return '';
   const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})$/);
   if (!m) return iso;
-  return `${m[3]}/${m[2]}/${m[1]}`;
+  return `${m[3]}-${m[2]}-${m[1]}`;
 }

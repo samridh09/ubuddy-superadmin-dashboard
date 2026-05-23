@@ -68,10 +68,10 @@ export const TIMETABLE_EDIT_ROWS: TimetableRowData[] = [
 ];
 
 export const TIMETABLE_MODAL_MOCK_DETAILS: TimetableModalDetail[] = [
-  { id: 1, date: '02/12/2025', subjects: ['Hindi', 'Science', 'xcv'] },
-  { id: 2, date: '03/12/2025', subjects: ['English'] },
-  { id: 3, date: '04/12/2025', subjects: ['Social Science'] },
-  { id: 4, date: '05/12/2025', subjects: ['Computer Science'] },
-  { id: 5, date: '06/12/2025', subjects: ['Mathematics'] },
-  { id: 6, date: '09/12/2025', subjects: ['Sanskrit'] },
+  { id: 1, date: '02-12-2025', subjects: ['Hindi', 'Science', 'xcv'] },
+  { id: 2, date: '03-12-2025', subjects: ['English'] },
+  { id: 3, date: '04-12-2025', subjects: ['Social Science'] },
+  { id: 4, date: '05-12-2025', subjects: ['Computer Science'] },
+  { id: 5, date: '06-12-2025', subjects: ['Mathematics'] },
+  { id: 6, date: '09-12-2025', subjects: ['Sanskrit'] },
 ];

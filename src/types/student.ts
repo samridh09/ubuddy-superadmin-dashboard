@@ -97,7 +97,7 @@ export const STUDENT_FIELDS: Record<string, StudentField> = {
     selection: 'Auto',
     mandatory: false,
     validation: 'No future date',
-    format: 'DD/MM/YYYY',
+    format: 'DD-MM-YYYY',
     remarks: 'Auto slash while typing',
   },
   bloodGroup: {
@@ -196,7 +196,7 @@ export const STUDENT_FIELDS: Record<string, StudentField> = {
     selection: 'Auto',
     mandatory: false,
     validation: 'Date',
-    format: 'DD/MM/YYYY',
+    format: 'DD-MM-YYYY',
   },
   scholarNumber: {
     fieldName: 'Scholar Number',
