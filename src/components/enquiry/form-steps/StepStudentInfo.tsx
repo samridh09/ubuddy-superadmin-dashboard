@@ -48,7 +48,6 @@ export function StepStudentInfo({
             <option key={session.id} value={session.id}>
               {session.name ||
                 `${new Date(session.start_date).getFullYear()}-${new Date(session.end_date).getFullYear()}`}
-              {session.is_active ? ' (Active)' : ''}
             </option>
           ))}
         </select>
@@ -98,6 +97,7 @@ export function StepStudentInfo({
           <option value="OTHER">Other</option>
         </select>
       </div>
+
       <div className="space-y-1.5">
         <label className={labelClass}>Source of Enquiry *</label>
         <select
@@ -134,6 +134,7 @@ export function StepStudentInfo({
           calendarDisabled={{ after: new Date() }}
         />
       </div>
+
       <div className="space-y-1.5">
         <label className={labelClass}>Father&apos;s Name</label>
         <input
@@ -144,6 +145,7 @@ export function StepStudentInfo({
           placeholder="Father's full name"
         />
       </div>
+
       <div className="space-y-1.5">
         <label className={labelClass}>Mother&apos;s Name</label>
         <input
@@ -154,6 +156,7 @@ export function StepStudentInfo({
           placeholder="Mother's full name"
         />
       </div>
+
       <div className="space-y-1.5">
         <label className={labelClass}>Last Class Attended</label>
         <input
@@ -164,6 +167,7 @@ export function StepStudentInfo({
           placeholder="E.g. 5th"
         />
       </div>
+
       <div className="space-y-1.5">
         <label className={labelClass}>Last School</label>
         <input
@@ -174,6 +178,7 @@ export function StepStudentInfo({
           placeholder="Previous school name"
         />
       </div>
+
       <div className="space-y-1.5 md:col-span-2">
         <label className={labelClass}>Address</label>
         <textarea

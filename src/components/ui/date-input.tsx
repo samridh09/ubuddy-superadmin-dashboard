@@ -54,6 +54,7 @@ export interface DateInputProps {
   error?: boolean;
   className?: string;
   compact?: boolean;
+  disabled?: boolean;
   calendarDisabled?: Matcher | Matcher[];
 }
 
@@ -65,6 +66,7 @@ export function DateInput({
   error = false,
   className,
   compact = false,
+  disabled = false,
   calendarDisabled,
 }: DateInputProps) {
   const [slots, setSlots]       = useState<string[]>(() => isoToSlots(value || ''));
@@ -160,13 +162,15 @@ export function DateInput({
         type="text"
         value={display}
         readOnly
+        disabled={disabled}
         placeholder={placeholder}
-        onKeyDown={handleKeyDown}
-        onFocus={handleFocusOrClick}
-        onClick={handleFocusOrClick}
+        onKeyDown={disabled ? undefined : handleKeyDown}
+        onFocus={disabled ? undefined : handleFocusOrClick}
+        onClick={disabled ? undefined : handleFocusOrClick}
         onBlur={handleBlur}
         className={cn(
-          'w-full bg-white border transition-all outline-none cursor-text',
+          'w-full bg-white border transition-all outline-none',
+          disabled ? 'cursor-not-allowed opacity-60' : 'cursor-text',
           compact
             ? 'rounded-lg px-2 py-1 pr-7 text-[12px] font-medium'
             : 'rounded-xl px-4 py-3 pr-10 text-[13px] font-bold',
