@@ -7,6 +7,7 @@ import {
   LayoutDashboard,
   School,
   UserCog,
+  Database,
   type LucideIcon
 } from 'lucide-react';
 import { useAuth } from '@/providers/auth-provider';
@@ -69,6 +70,13 @@ export default function SuperAdminSidebar() {
       icon: UserCog,
       description: "Configure admin settings"
     },
+    { 
+      id: 'master',               
+      name: 'Master',               
+      route: `${base}/master`,                 
+      icon: Database,
+      description: "Manage subjects & terms"
+    },
   ], [base]);
 
   const filteredNavItems = useMemo(() => {
@@ -95,6 +103,10 @@ export default function SuperAdminSidebar() {
 
       if (item.id === 'configuration-admin') {
         return hasPermission('sub-admin', 'READ');
+      }
+
+      if (item.id === 'master') {
+        return isSuperAdmin;
       }
 
       return true;

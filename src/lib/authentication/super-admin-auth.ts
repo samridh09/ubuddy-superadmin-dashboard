@@ -156,27 +156,27 @@ export const forgotPassword = async (email: string, role: 'superadmin' | 'config
 };
 
 /**
- * Validate reset token
+ * Verify OTP
  */
-export const validateResetToken = async (token: string, role: 'superadmin' | 'configadmin'): Promise<void> => {
+export const verifyOtp = async (email: string, otp: string, role: 'superadmin' | 'configadmin'): Promise<void> => {
   const url = role === 'superadmin'
-    ? API_ENDPOINTS.superAdmin.validateToken
-    : API_ENDPOINTS.configurationAdmin.validateToken;
+    ? API_ENDPOINTS.superAdmin.verifyOtp
+    : API_ENDPOINTS.configurationAdmin.verifyOtp;
 
   const response = await fetch(url, {
     method: 'POST',
     headers: { ...API_CONFIG.headers },
-    body: JSON.stringify({ token }),
+    body: JSON.stringify({ email, otp }),
   });
 
   const data = await response.json();
-  if (!response.ok) throw new Error(data.message || 'Invalid or expired token');
+  if (!response.ok) throw new Error(data.message || 'Invalid or expired OTP');
 };
 
 /**
- * Reset password using token
+ * Reset password using OTP
  */
-export const resetPassword = async (token: string, password: string, role: 'superadmin' | 'configadmin'): Promise<void> => {
+export const resetPassword = async (email: string, otp: string, password: string, role: 'superadmin' | 'configadmin'): Promise<void> => {
   const url = role === 'superadmin'
     ? API_ENDPOINTS.superAdmin.resetPassword
     : API_ENDPOINTS.configurationAdmin.resetPassword;
@@ -184,7 +184,7 @@ export const resetPassword = async (token: string, password: string, role: 'supe
   const response = await fetch(url, {
     method: 'POST',
     headers: { ...API_CONFIG.headers },
-    body: JSON.stringify({ token, password }),
+    body: JSON.stringify({ email, otp, password }),
   });
 
   const data = await response.json();

@@ -5,16 +5,22 @@ import { extractPaginationMeta } from '@/types/pagination';
 export interface Session {
   id: string;
   school_id: string;
-  name?: string;
+  name: string;
   start_date: string;
   end_date: string;
-  is_active?: boolean;
   created_at?: string;
   updated_at?: string;
 }
 
 export interface CreateSessionRequest {
   school_id: string;
+  name: string;
+  start_date: string;
+  end_date: string;
+}
+
+export interface UpdateSessionRequest {
+  name: string;
   start_date: string;
   end_date: string;
 }
@@ -28,30 +34,13 @@ export interface SessionResponse {
 interface RawSession {
   id: string;
   school_id: string;
-  name?: string;
+  name: string;
   start_date: string;
   end_date: string;
-  is_active?: boolean;
-  created_at?: string;
-  updated_at?: string;
   createdAt?: string;
   updatedAt?: string;
-}
-
-function isSessionActive(session: Pick<RawSession, 'start_date' | 'end_date' | 'is_active'>): boolean {
-  if (typeof session.is_active === 'boolean') {
-    return session.is_active;
-  }
-
-  const now = Date.now();
-  const start = new Date(session.start_date).getTime();
-  const end = new Date(session.end_date).getTime();
-
-  if (Number.isNaN(start) || Number.isNaN(end)) {
-    return false;
-  }
-
-  return start <= now && now <= end;
+  created_at?: string;
+  updated_at?: string;
 }
 
 function normalizeSession(session: RawSession): Session {
@@ -61,50 +50,40 @@ function normalizeSession(session: RawSession): Session {
     name: session.name,
     start_date: session.start_date,
     end_date: session.end_date,
-    is_active: isSessionActive(session),
     created_at: session.created_at || session.createdAt,
     updated_at: session.updated_at || session.updatedAt,
   };
 }
 
-function extractSessions(payload: unknown): Session[] {
+function extractSessions(payload: any): Session[] {
   if (!payload || typeof payload !== 'object') {
     return [];
   }
 
-  const record = payload as Record<string, unknown>;
-  const data = record.data ?? payload;
+  const data = payload.data?.data || payload.data || [];
 
   if (Array.isArray(data)) {
-    return data as Session[];
+    return data.map(normalizeSession);
   }
 
-  if (data && typeof data === 'object') {
-    const nestedRecord = data as Record<string, unknown>;
-    const nestedItems = Array.isArray(nestedRecord.data)
-      ? nestedRecord.data
-      : Array.isArray(nestedRecord.items)
-        ? nestedRecord.items
-        : null;
-
-    if (Array.isArray(nestedItems)) {
-      return nestedItems.map((item) => normalizeSession(item as RawSession));
-    }
-  }
-
-  return (Array.isArray(data) ? data : []).map((item) => normalizeSession(item as RawSession));
+  return [];
 }
 
-export const getSessionsPage = async (page: number, limit: number, search?: string): Promise<PagedResult<Session>> => {
+export const getSessionsPage = async (schoolId: string, page: number, limit: number): Promise<PagedResult<Session>> => {
   try {
-    const params = new URLSearchParams({ page: String(page), limit: String(limit) });
-    if (search?.trim()) params.set('search', search.trim());
+    const params = new URLSearchParams({ 
+      school_id: schoolId,
+      page: String(page), 
+      limit: String(limit) 
+    });
+    
     const response = await fetch(`${API_ENDPOINTS.sessions.base()}?${params}`, {
       method: 'GET',
       headers: { 'Content-Type': 'application/json', ...getAuthHeader() as Record<string, string> },
     });
     const payload = await response.json();
     if (!response.ok) throw new Error(payload.message || 'Failed to fetch sessions');
+    
     const data = extractSessions(payload);
     const pagination = extractPaginationMeta(payload, data.length);
     return { data, pagination };
@@ -114,9 +93,9 @@ export const getSessionsPage = async (page: number, limit: number, search?: stri
   }
 };
 
-export const getAllSessions = async (): Promise<Session[]> => {
+export const getSessionById = async (id: string): Promise<Session> => {
   try {
-    const response = await fetch(API_ENDPOINTS.sessions.base(), {
+    const response = await fetch(API_ENDPOINTS.sessions.getById(id), {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -127,12 +106,12 @@ export const getAllSessions = async (): Promise<Session[]> => {
     const responseData = await response.json();
 
     if (!response.ok) {
-      throw new Error(responseData.message || 'Failed to fetch sessions');
+      throw new Error(responseData.message || 'Failed to fetch session');
     }
 
-    return extractSessions(responseData);
+    return normalizeSession(responseData.data);
   } catch (error) {
-    console.error('Get All Sessions error:', error);
+    console.error('Get Session By ID error:', error);
     throw error;
   }
 };
@@ -154,9 +133,53 @@ export const createSession = async (data: CreateSessionRequest): Promise<Session
       throw new Error(responseData.message || 'Failed to create session');
     }
 
-    return responseData.data as Session;
+    return normalizeSession(responseData.data);
   } catch (error) {
     console.error('Create Session error:', error);
+    throw error;
+  }
+};
+
+export const updateSession = async (id: string, data: UpdateSessionRequest): Promise<Session> => {
+  try {
+    const response = await fetch(API_ENDPOINTS.sessions.update(id), {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        ...getAuthHeader() as Record<string, string>,
+      },
+      body: JSON.stringify(data),
+    });
+
+    const responseData = await response.json();
+
+    if (!response.ok) {
+      throw new Error(responseData.message || 'Failed to update session');
+    }
+
+    return normalizeSession(responseData.data);
+  } catch (error) {
+    console.error('Update Session error:', error);
+    throw error;
+  }
+};
+
+export const deleteSession = async (id: string): Promise<void> => {
+  try {
+    const response = await fetch(API_ENDPOINTS.sessions.delete(id), {
+      method: 'DELETE',
+      headers: {
+        ...getAuthHeader() as Record<string, string>,
+      },
+    });
+
+    const responseData = await response.json();
+
+    if (!response.ok) {
+      throw new Error(responseData.message || 'Failed to delete session');
+    }
+  } catch (error) {
+    console.error('Delete Session error:', error);
     throw error;
   }
 };

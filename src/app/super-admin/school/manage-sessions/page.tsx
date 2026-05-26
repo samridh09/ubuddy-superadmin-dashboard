@@ -1,19 +1,40 @@
 'use client';
 
-import React, { Suspense } from 'react';
+import React, { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 
-import { SchoolManageSessionsView } from '../../../wireframe/ui/components/SchoolManageSessionsView';
-import { MOCK_SESSIONS } from '@/mock/school.mock';
+import { SessionManagementView } from '@/components/super-admin/school/sessions/SessionManagementView';
+import { getSchoolById } from '@/lib/services/school-service';
 
 function ManageSessionsContent() {
   const searchParams = useSearchParams();
   const schoolId = searchParams.get('schoolId') || '';
+  const [schoolName, setSchoolName] = useState('Loading...');
+
+  useEffect(() => {
+    if (schoolId) {
+      getSchoolById(schoolId)
+        .then((school) => {
+          setSchoolName(school.name);
+        })
+        .catch((err) => {
+          console.error('Failed to fetch school details:', err);
+          setSchoolName('Institution');
+        });
+    }
+  }, [schoolId]);
+
+  if (!schoolId) {
+    return (
+      <div className="p-8 text-center">
+        <p className="text-gray-500">No School ID provided.</p>
+      </div>
+    );
+  }
 
   return (
-    <SchoolManageSessionsView
-      schoolName="Nishu International School"
-      initialSessions={MOCK_SESSIONS}
+    <SessionManagementView
+      schoolName={schoolName}
       schoolId={schoolId}
     />
   );

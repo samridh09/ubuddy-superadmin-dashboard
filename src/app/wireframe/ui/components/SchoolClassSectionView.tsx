@@ -392,33 +392,33 @@ export const SchoolClassSectionView: React.FC<SchoolClassSectionViewProps> = ({
           </div>
 
           {/* Table rendering */}
-          <Table fixed={true}>
-            {isEditing ? (
-              <THead>
-                <Th className="pl-12 w-[60px]"></Th>
-                <Th className="px-6 w-[220px] border-r border-gray-100">Class</Th>
-                <Th className="pl-8 w-full">
-                  <div className="flex items-center justify-between w-full">
-                    <span>Sections</span>
-                    <span className="text-[10px] text-blue-600 font-semibold flex items-center gap-1 normal-case pr-4">
-                      <Info size={12} /> Minimum one section is mandatory
-                    </span>
-                  </div>
-                </Th>
-              </THead>
-            ) : (
-              <THead>
-                <Th className="pl-12 w-[120px]">S. No.</Th>
-                <Th className="w-[220px]">Class</Th>
-                <Th className="w-full">Section</Th>
-              </THead>
-            )}
-            
-            <DndContext 
-              sensors={sensors}
-              collisionDetection={closestCenter}
-              onDragEnd={handleDragEnd}
-            >
+          <DndContext 
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <Table fixed={true}>
+              {isEditing ? (
+                <THead>
+                  <Th className="pl-12 w-[60px]"></Th>
+                  <Th className="px-6 w-[220px] border-r border-gray-100">Class</Th>
+                  <Th className="pl-8 w-full">
+                    <div className="flex items-center justify-between w-full">
+                      <span>Sections</span>
+                      <span className="text-[10px] text-blue-600 font-semibold flex items-center gap-1 normal-case pr-4">
+                        <Info size={12} /> Minimum one section is mandatory
+                      </span>
+                    </div>
+                  </Th>
+                </THead>
+              ) : (
+                <THead>
+                  <Th className="pl-12 w-[120px]">S. No.</Th>
+                  <Th className="w-[220px]">Class</Th>
+                  <Th className="w-full">Section</Th>
+                </THead>
+              )}
+              
               <TBody>
                 <SortableContext 
                   items={currentList.map(item => item.id)}
@@ -441,8 +441,8 @@ export const SchoolClassSectionView: React.FC<SchoolClassSectionViewProps> = ({
                   ))}
                 </SortableContext>
               </TBody>
-            </DndContext>
-          </Table>
+            </Table>
+          </DndContext>
         </DataTable>
       </div>
     </PageWrapper>
