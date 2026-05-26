@@ -207,9 +207,19 @@ function LoginPageContent() {
                         {...register('password', { required: 'Password is required' })}
                       />
                     </div>
-                    {errors.password && (
-                      <p className="ml-1 mt-1 text-xs text-red-500">{errors.password.message}</p>
-                    )}
+                    <div className="mt-2 flex items-center justify-between">
+                      {errors.password ? (
+                        <p className="ml-1 text-xs text-red-500">{errors.password.message}</p>
+                      ) : (
+                        <div />
+                      )}
+                      <Link
+                        href="/super-admin/forgot-password"
+                        className="text-xs font-medium text-neutral-600 hover:text-neutral-900 transition-colors"
+                      >
+                        Forgot password?
+                      </Link>
+                    </div>
                   </div>
 
                   <button
