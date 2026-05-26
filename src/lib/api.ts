@@ -59,6 +59,7 @@ export const API_ENDPOINTS = {
     login:   `${API_BASE_URL}/v1/auth/superadmin/login`,
     me:      `${API_BASE_URL}/v1/auth/superadmin/me`,
     forgotPassword: `${API_BASE_URL}/v1/auth/superadmin/forgot-password`,
+    verifyOtp:      `${API_BASE_URL}/v1/auth/superadmin/verify-otp`,
     validateToken:  `${API_BASE_URL}/v1/auth/superadmin/validate-token`,
     resetPassword:   `${API_BASE_URL}/v1/auth/superadmin/reset-password`,
     dashboard: `${API_BASE_URL}/v1/superadmin/dashboard`,
@@ -66,6 +67,7 @@ export const API_ENDPOINTS = {
   configurationAdmin: {
     login:   `${API_BASE_URL}/v1/auth/configurationadmin/login`,
     forgotPassword: `${API_BASE_URL}/v1/auth/configurationadmin/forgot-password`,
+    verifyOtp:      `${API_BASE_URL}/v1/auth/configurationadmin/verify-otp`,
     validateToken:  `${API_BASE_URL}/v1/auth/configurationadmin/validate-token`,
     resetPassword:   `${API_BASE_URL}/v1/auth/configurationadmin/reset-password`,
   },
