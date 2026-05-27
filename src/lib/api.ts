@@ -80,6 +80,8 @@ export const API_ENDPOINTS = {
   globalTerms: {
     base:  `${API_BASE_URL}/v1/admin/global-terms`,
     byId:  (id: string) => `${API_BASE_URL}/v1/admin/global-terms/${id}`,
+    assignments: `${API_BASE_URL}/v1/admin/global-terms/assignments`,
+    byClass: `${API_BASE_URL}/v1/admin/global-terms/by-class`,
   },
   
   // Dashboard endpoints

@@ -1,36 +1,25 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useBasePath } from './use-base-path';
-import { Pencil, Save, X, ChevronDown, ChevronUp } from 'lucide-react';
+import { Pencil, Save, X, ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
 import {
   PageWrapper, PageHeader, PrimaryButton, SecondaryButton
 } from './ui';
 import { SchoolTermsViewProps } from '@/types';
+import { Class, getAllClasses } from '@/lib/services/class-service';
+import {
+  fetchGlobalTerms,
+  assignTermsToClass,
+  getClassAssignedTerms,
+  GlobalTerm,
+} from '@/lib/services/global-terms-service';
 
-interface ClassTermData {
-  id: string;
-  className: string;
-  terms: string[];
+interface ClassWithTerms extends Class {
+  assignedTermIds: string[];
+  initialTermIds: string[];
 }
-
-const INITIAL_DATA: ClassTermData[] = [
-  { id: '1', className: '1st', terms: ['Annual Exam'] },
-  { id: '2', className: '2nd', terms: ['Annual Exam'] },
-  { id: '3', className: '3rd', terms: ['Annual Exam'] },
-  { id: '4', className: '4th', terms: ['Annual Exam'] },
-  { id: '5', className: '5th', terms: ['Annual Exam'] },
-];
-
-const ALL_TERMS: string[] = [
-  'Monthly Test', 'Unit Test 1', 'Unit Test 2', 'Unit Test 3', 'Unit Test 4', 'Periodic Test 1', 'Periodic Test 2', 'Quarterly Exam',
-  'Term 1 Exam', 'Pre-Mid Term Exam', 'Mid Term Exam', 'Term 2 Exam', 'Pre-Half Yearly Exam', 'Half Yearly Exam', 'Post-Half Yearly Exam', 'Pre-Annual Exam',
-  'Annual Exam', 'Term 3 Exam', 'Pre-Board Exam', 'Board Exam', 'Mock Test', 'Practice Test', 'Class Test', 'Open Book Test',
-  'Objective Test', 'Subjective Test', 'Descriptive Test', 'Formative Assessment 1', 'Formative Assessment 2', 'Summative Assessment 1', 'Summative Assessment 2', 'Internal Assessment',
-  'Practical Exam', 'Viva Voce', 'Assignment Submission', 'Project Work', 'Lab Work', 'Field Work', 'Online Test', 'Oral Test',
-  'Weekly Test', 'Slip Test', 'Re-Test', 'Supplementary Exam', 'Final Exam', 'Annual School Exam', 'Sessional Exam', 'Entrance Practice Test'
-];
 
 export const SchoolTermsView: React.FC<SchoolTermsViewProps> = ({
   schoolName,
@@ -41,30 +30,66 @@ export const SchoolTermsView: React.FC<SchoolTermsViewProps> = ({
   const router = useRouter();
   const base = useBasePath();
 
-  const [data, setData] = useState<ClassTermData[]>(INITIAL_DATA);
-  const [tempData, setTempData] = useState<ClassTermData[]>([]);
-  const [expandedClassIds, setExpandedClassIds] = useState<string[]>([INITIAL_DATA[0]?.id || '']);
+  const [classes, setClasses] = useState<ClassWithTerms[]>([]);
+  const [masterTerms, setMasterTerms] = useState<GlobalTerm[]>([]);
+  const [expandedClassIds, setExpandedClassIds] = useState<string[]>([]);
+  
+  const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // Enter edit mode
-  const handleStartEdit = () => {
-    const clone = JSON.parse(JSON.stringify(data));
-    setTempData(clone);
-    setIsEditing(true);
-  };
+  const fetchData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
 
-  // Cancel edit mode
-  const handleCancelEdit = () => {
-    setIsEditing(false);
-    setTempData([]);
-  };
+      const [classesData, termsData] = await Promise.all([
+        getAllClasses(schoolId, sessionId),
+        fetchGlobalTerms()
+      ]);
 
-  // Save changes
-  const handleSaveEdit = () => {
-    setData(JSON.parse(JSON.stringify(tempData)));
-    setIsEditing(false);
-    setTempData([]);
-  };
+      setMasterTerms(termsData);
+
+      const classesWithAssigned = await Promise.all(
+        classesData.map(async (cls) => {
+          try {
+            const assigned = await getClassAssignedTerms(cls.id, sessionId);
+            // The endpoint returns an array of objects where each object has a `term` property
+            const assignedIds = assigned.map(a => a.term?.id || a.global_term_id).filter(Boolean) as string[];
+            return {
+              ...cls,
+              assignedTermIds: assignedIds,
+              initialTermIds: [...assignedIds]
+            };
+          } catch (err) {
+            console.error(`Failed to fetch terms for class ${cls.id}`, err);
+            return {
+              ...cls,
+              assignedTermIds: [],
+              initialTermIds: []
+            };
+          }
+        })
+      );
+
+      setClasses(classesWithAssigned);
+      if (classesWithAssigned.length > 0) {
+        setExpandedClassIds([classesWithAssigned[0].id]);
+      }
+    } catch (err: any) {
+      console.error('Failed to fetch term configuration:', err);
+      setError(err.message || 'Failed to load data');
+    } finally {
+      setLoading(false);
+    }
+  }, [schoolId, sessionId]);
+
+  useEffect(() => {
+    if (schoolId && sessionId) {
+      fetchData();
+    }
+  }, [schoolId, sessionId, fetchData]);
 
   const toggleClassExpand = (classId: string) => {
     setExpandedClassIds(prev =>
@@ -74,161 +99,144 @@ export const SchoolTermsView: React.FC<SchoolTermsViewProps> = ({
     );
   };
 
-  const handleToggleTerm = (classId: string, termName: string) => {
-    setTempData(prev =>
+  const handleToggleTerm = (classId: string, termId: string) => {
+    if (!isEditing) return;
+
+    setClasses(prev =>
       prev.map(c => {
         if (c.id === classId) {
-          const exists = c.terms.includes(termName);
-          const newTerms = exists
-            ? c.terms.filter(t => t !== termName)
-            : [...c.terms, termName];
-          return { ...c, terms: newTerms };
+          const exists = c.assignedTermIds.includes(termId);
+          const newIds = exists
+            ? c.assignedTermIds.filter(id => id !== termId)
+            : [...c.assignedTermIds, termId];
+          return { ...c, assignedTermIds: newIds };
         }
         return c;
       })
     );
   };
 
+  const handleStartEdit = () => {
+    setIsEditing(true);
+  };
+
+  const handleCancelEdit = () => {
+    setClasses(prev => prev.map(c => ({
+      ...c,
+      assignedTermIds: [...c.initialTermIds]
+    })));
+    setIsEditing(false);
+  };
+
+  const handleSaveEdit = async () => {
+    setIsSaving(true);
+    try {
+      const changedClasses = classes.filter(c => 
+        JSON.stringify(c.assignedTermIds.sort()) !== JSON.stringify(c.initialTermIds.sort())
+      );
+
+      await Promise.all(
+        changedClasses.map(c => assignTermsToClass(c.id, sessionId, c.assignedTermIds))
+      );
+
+      await fetchData();
+      setIsEditing(false);
+    } catch (err: any) {
+      alert(err.message || 'Failed to save term assignments');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   return (
     <PageWrapper>
-      {/* Header */}
       <PageHeader
-        title="Assign Terms to Classes"
-        subtitle={`${schoolName} | ${sessionYear}`}
+        title={`${schoolName} | Configuration | Term`}
+        subtitle={sessionYear}
         showBack
         onBack={() => router.push(`${base}/school/manage-sessions/configure?schoolId=${schoolId}&sessionId=${sessionId}`)}
         actions={
           <div className="flex items-center gap-3">
             <span className="border border-gray-200 text-gray-700 bg-white px-4 py-2 rounded-xl font-bold text-[13px] shadow-none flex items-center justify-center h-10 tracking-tight">
-              Total Classes : {data.length}
+              Total Classes : {loading ? '...' : classes.length}
             </span>
           </div>
         }
       />
 
-      <div className="max-w-7xl mx-auto">
-        {isEditing ? (
-          <div className="space-y-6">
-            {/* Table Toolbar in Edit Mode */}
-            <div className="p-6 border border-gray-100 flex items-center justify-between bg-white rounded-3xl animate-slideUp fill-mode-both" style={{ animationDelay: '50ms' }}>
-              <div>
-                <h3 className="text-[16px] font-bold text-blue-900 tracking-tight">
-                  Term Configurations
-                </h3>
-                <p className="text-[11px] text-gray-400 font-bold uppercase tracking-widest mt-0.5">
-                  Select or deselect terms enabled for each class
-                </p>
-              </div>
-              <div className="flex items-center gap-3">
-                <SecondaryButton onClick={handleCancelEdit} className="h-10 px-4 text-[13px]">
-                  <X size={15} />
-                  Cancel
-                </SecondaryButton>
-                <PrimaryButton
-                  onClick={handleSaveEdit}
-                  className="h-10 px-5 text-[13px] bg-blue-600 hover:bg-blue-700"
-                >
-                  <Save size={15} />
-                  Save
-                </PrimaryButton>
-              </div>
+      <div className="max-w-5xl mx-auto">
+        <div className="space-y-6">
+          {/* Toolbar */}
+          <div className="p-6 border border-gray-100 flex items-center justify-between bg-white rounded-3xl animate-slideUp fill-mode-both" style={{ animationDelay: '50ms' }}>
+            <div>
+              <h3 className="text-[16px] font-bold text-blue-900 tracking-tight">
+                Term Configurations
+              </h3>
+              <p className="text-[11px] text-gray-400 font-bold uppercase tracking-widest mt-0.5">
+                {isEditing ? 'Select or deselect terms enabled for the session' : 'View configured classes and terms'}
+              </p>
             </div>
-
-            {/* Accordion Cards for each class in Edit Mode */}
-            <div className="space-y-4">
-              {tempData.map((classItem, classIdx) => {
-                const isExpanded = expandedClassIds.includes(classItem.id);
-                const selectedCount = classItem.terms.length;
-                return (
-                  <div
-                    key={classItem.id}
-                    className="bg-white border border-gray-100 rounded-3xl shadow-none overflow-hidden animate-slideUp fill-mode-both"
-                    style={{ animationDelay: `${100 + classIdx * 20}ms` }}
+            <div className="flex items-center gap-3">
+              {loading ? (
+                <div className="h-10 w-24 bg-gray-100 animate-pulse rounded-xl" />
+              ) : isEditing ? (
+                <>
+                  <SecondaryButton onClick={handleCancelEdit} className="h-10 px-4 text-[13px]">
+                    <X size={15} />
+                    Cancel
+                  </SecondaryButton>
+                  <PrimaryButton
+                    onClick={handleSaveEdit}
+                    disabled={isSaving}
+                    className="h-10 min-w-[120px] px-5 text-[13px] bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed animate-fadeIn flex items-center justify-center gap-2"
                   >
-                    {/* Card Header */}
-                    <button
-                      type="button"
-                      onClick={() => toggleClassExpand(classItem.id)}
-                      className="w-full flex items-center justify-between p-6 hover:bg-gray-50/50 transition-colors text-left"
-                    >
-                      <div>
-                        <h4 className="text-[15px] font-bold text-black leading-tight">
-                          {classItem.className}
-                        </h4>
-                        <p className="text-[11px] text-black font-bold uppercase tracking-widest mt-0.5">
-                          {selectedCount}/{ALL_TERMS.length} terms selected
-                        </p>
-                      </div>
-                      <div className="text-black p-2 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
-                        {isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
-                      </div>
-                    </button>
-
-                    {/* Expanded Content */}
-                    {isExpanded && (
-                      <div className="px-6 pb-6 pt-2 border-t border-gray-50 animate-fadeIn">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 xl:grid-cols-8 gap-3 pt-2">
-                          {ALL_TERMS.map((termName) => {
-                            const isChecked = classItem.terms.includes(termName);
-                            return (
-                              <button
-                                key={termName}
-                                type="button"
-                                onClick={() => handleToggleTerm(classItem.id, termName)}
-                                className={`flex items-center gap-2 px-2 py-3 rounded-xl border text-[12px] font-bold transition-all duration-200 active:scale-95 group text-left ${
-                                  isChecked
-                                    ? 'bg-neutral-50 border-black'
-                                    : 'bg-white border-gray-200 hover:bg-gray-50/50 hover:border-gray-300'
-                                }`}
-                              >
-                                <div className={`w-4 h-4 rounded border flex items-center justify-center transition-all flex-shrink-0 ${
-                                  isChecked
-                                    ? 'bg-black border-black text-white'
-                                    : 'border-gray-300 bg-white group-hover:border-gray-400'
-                                }`}>
-                                  {isChecked && (
-                                    <svg className="w-2.5 h-2.5 stroke-[3px]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                                    </svg>
-                                  )}
-                                </div>
-                                <span className="text-black leading-tight break-words">{termName}</span>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
+                    {isSaving ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <Save size={15} />
+                        Save
+                      </>
                     )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        ) : (
-          <div className="space-y-6">
-            {/* Table Toolbar in Read-only Mode */}
-            <div className="p-6 border border-gray-100 flex items-center justify-between bg-white rounded-3xl animate-slideUp fill-mode-both" style={{ animationDelay: '50ms' }}>
-              <div>
-                <h3 className="text-[16px] font-bold text-blue-900 tracking-tight">
-                  Term Configurations
-                </h3>
-                <p className="text-[11px] text-gray-400 font-bold uppercase tracking-widest mt-0.5">
-                  View configured classes and assigned terms
-                </p>
-              </div>
-              <div className="flex items-center gap-3">
+                  </PrimaryButton>
+                </>
+              ) : (
                 <PrimaryButton onClick={handleStartEdit} className="h-10 px-5 text-[13px] bg-blue-600 hover:bg-blue-700">
                   <Pencil size={15} />
                   Edit
                 </PrimaryButton>
-              </div>
+              )}
             </div>
+          </div>
 
-            {/* Accordion Cards for each class (Read-only View) */}
-            <div className="space-y-4">
-              {data.map((classItem, classIdx) => {
+          {/* List of Classes */}
+          <div className="space-y-4">
+            {loading ? (
+              // Skeleton Loading State
+              Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="bg-white border border-gray-100 rounded-3xl p-6 space-y-4">
+                  <div className="flex justify-between items-center">
+                    <div className="space-y-3">
+                      <div className="h-5 w-32 bg-gray-100 animate-pulse rounded-lg" />
+                      <div className="h-3 w-48 bg-gray-50 animate-pulse rounded-lg" />
+                    </div>
+                    <div className="h-10 w-10 bg-gray-50 animate-pulse rounded-xl" />
+                  </div>
+                </div>
+              ))
+            ) : error ? (
+              <div className="bg-white border border-red-100 rounded-3xl p-20 text-center">
+                <p className="text-red-500 font-medium">{error}</p>
+                <SecondaryButton onClick={fetchData} className="mt-4 h-10 px-6">Retry</SecondaryButton>
+              </div>
+            ) : (
+              classes.map((classItem, classIdx) => {
                 const isExpanded = expandedClassIds.includes(classItem.id);
-                const selectedCount = classItem.terms.length;
+                const selectedCount = classItem.assignedTermIds.length;
+                
                 return (
                   <div
                     key={classItem.id}
@@ -243,10 +251,10 @@ export const SchoolTermsView: React.FC<SchoolTermsViewProps> = ({
                     >
                       <div>
                         <h4 className="text-[15px] font-bold text-black leading-tight">
-                          {classItem.className}
+                          {classItem.name}
                         </h4>
                         <p className="text-[11px] text-black font-bold uppercase tracking-widest mt-0.5">
-                          {selectedCount}/{ALL_TERMS.length} terms selected
+                          {selectedCount}/{masterTerms.length} terms selected
                         </p>
                       </div>
                       <div className="text-black p-2 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
@@ -257,13 +265,42 @@ export const SchoolTermsView: React.FC<SchoolTermsViewProps> = ({
                     {/* Expanded Content */}
                     {isExpanded && (
                       <div className="px-6 pb-6 pt-2 border-t border-gray-50 animate-fadeIn">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 xl:grid-cols-8 gap-3 pt-2">
-                          {ALL_TERMS.map((termName) => {
-                            const isChecked = classItem.terms.includes(termName);
+                        <div className="flex flex-wrap gap-3 pt-2">
+                          {masterTerms.map((term) => {
+                            const isChecked = classItem.assignedTermIds.includes(term.id);
+                            
+                            if (isEditing) {
+                              return (
+                                <button
+                                  key={term.id}
+                                  type="button"
+                                  onClick={() => handleToggleTerm(classItem.id, term.id)}
+                                  className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl border text-[13px] font-bold transition-all duration-200 active:scale-95 group text-left ${
+                                    isChecked
+                                      ? 'bg-neutral-50 border-black'
+                                      : 'bg-white border-gray-200 hover:bg-gray-50/50 hover:border-gray-300'
+                                  }`}
+                                >
+                                  <div className={`w-4 h-4 rounded border flex items-center justify-center transition-all flex-shrink-0 ${
+                                    isChecked
+                                      ? 'bg-black border-black text-white'
+                                      : 'border-gray-300 bg-white group-hover:border-gray-400'
+                                  }`}>
+                                    {isChecked && (
+                                      <svg className="w-2.5 h-2.5 stroke-[3px]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                      </svg>
+                                    )}
+                                  </div>
+                                  <span className="text-black leading-tight whitespace-nowrap">{term.name}</span>
+                                </button>
+                              );
+                            }
+
                             return (
                               <div
-                                key={termName}
-                                className={`flex items-center gap-2 px-2 py-3 rounded-xl border text-[12px] font-bold text-left cursor-default select-none transition-all duration-200 ${
+                                key={term.id}
+                                className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl border text-[13px] font-bold text-left cursor-default select-none transition-all duration-200 ${
                                   isChecked
                                     ? 'bg-neutral-50 border-black'
                                     : 'bg-white border-gray-200'
@@ -273,14 +310,14 @@ export const SchoolTermsView: React.FC<SchoolTermsViewProps> = ({
                                   isChecked
                                     ? 'bg-black border-black text-white'
                                     : 'border-gray-300 bg-white'
-                                }`}>
+                                  }`}>
                                   {isChecked && (
                                     <svg className="w-2.5 h-2.5 stroke-[3px]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                       <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                                     </svg>
                                   )}
                                 </div>
-                                <span className="text-black leading-tight break-words">{termName}</span>
+                                <span className="text-black leading-tight whitespace-nowrap">{term.name}</span>
                               </div>
                             );
                           })}
@@ -289,10 +326,10 @@ export const SchoolTermsView: React.FC<SchoolTermsViewProps> = ({
                     )}
                   </div>
                 );
-              })}
-            </div>
+              })
+            )}
           </div>
-        )}
+        </div>
       </div>
     </PageWrapper>
   );
