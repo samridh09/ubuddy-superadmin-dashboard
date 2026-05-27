@@ -71,6 +71,16 @@ export const API_ENDPOINTS = {
     validateToken:  `${API_BASE_URL}/v1/auth/configurationadmin/validate-token`,
     resetPassword:   `${API_BASE_URL}/v1/auth/configurationadmin/reset-password`,
   },
+
+  // Global Master data endpoints
+  globalSubjects: {
+    base:  `${API_BASE_URL}/v1/admin/global-subjects`,
+    byId:  (id: string) => `${API_BASE_URL}/v1/admin/global-subjects/${id}`,
+  },
+  globalTerms: {
+    base:  `${API_BASE_URL}/v1/admin/global-terms`,
+    byId:  (id: string) => `${API_BASE_URL}/v1/admin/global-terms/${id}`,
+  },
   
   // Dashboard endpoints
   dashboard: {
