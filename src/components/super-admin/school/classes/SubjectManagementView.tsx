@@ -7,7 +7,8 @@ import {
   PageWrapper, PageHeader, PrimaryButton, SecondaryButton
 } from '@/app/wireframe/ui/components/ui';
 import { Class, getAllClasses } from '@/lib/services/class-service';
-import { Subject, getAllSubjects, getClassSubjects, assignClassSubjects } from '@/lib/services/subject-service';
+import { Subject, getClassSubjects, assignClassSubjects } from '@/lib/services/subject-service';
+import { fetchGlobalSubjects } from '@/lib/services/global-subjects-service';
 
 interface ClassWithSubjects extends Class {
   assignedSubjectIds: string[];
@@ -45,10 +46,23 @@ export const SubjectManagementView: React.FC<SubjectManagementViewProps> = ({
 
       const [classesData, subjectsData] = await Promise.all([
         getAllClasses(schoolId, sessionId),
-        getAllSubjects(schoolId)
+        fetchGlobalSubjects()
       ]);
 
-      setMasterSubjects(subjectsData);
+      // Global subjects have different casing/types but we map them to the expected shape
+      const mappedSubjects: Subject[] = subjectsData.map(gs => ({
+        id: gs.id,
+        school_id: schoolId,
+        name: gs.name,
+        code: gs.code || '',
+        description: gs.description || '',
+        is_active: gs.is_active,
+        is_elective: false,
+        created_at: gs.createdAt,
+        updated_at: gs.updatedAt
+      }));
+
+      setMasterSubjects(mappedSubjects);
 
       const classesWithAssigned = await Promise.all(
         classesData.map(async (cls) => {
@@ -267,7 +281,7 @@ export const SubjectManagementView: React.FC<SubjectManagementViewProps> = ({
                     {/* Expanded Content */}
                     {isExpanded && (
                       <div className="px-6 pb-6 pt-2 border-t border-gray-50 animate-fadeIn">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 xl:grid-cols-8 gap-3 pt-2">
+                        <div className="flex flex-wrap gap-3 pt-2">
                           {masterSubjects.map((subject) => {
                             const isChecked = classItem.assignedSubjectIds.includes(subject.id);
                             
@@ -277,7 +291,7 @@ export const SubjectManagementView: React.FC<SubjectManagementViewProps> = ({
                                   key={subject.id}
                                   type="button"
                                   onClick={() => handleToggleSubject(classItem.id, subject.id)}
-                                  className={`flex items-center gap-2 px-2 py-3 rounded-xl border text-[12px] font-bold transition-all duration-200 active:scale-95 group text-left ${
+                                  className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl border text-[13px] font-bold transition-all duration-200 active:scale-95 group text-left ${
                                     isChecked
                                       ? 'bg-neutral-50 border-black'
                                       : 'bg-white border-gray-200 hover:bg-gray-50/50 hover:border-gray-300'
@@ -294,7 +308,7 @@ export const SubjectManagementView: React.FC<SubjectManagementViewProps> = ({
                                       </svg>
                                     )}
                                   </div>
-                                  <span className="text-black leading-tight break-words">{subject.name}</span>
+                                  <span className="text-black leading-tight whitespace-nowrap">{subject.name}</span>
                                 </button>
                               );
                             }
@@ -302,7 +316,7 @@ export const SubjectManagementView: React.FC<SubjectManagementViewProps> = ({
                             return (
                               <div
                                 key={subject.id}
-                                className={`flex items-center gap-2 px-2 py-3 rounded-xl border text-[12px] font-bold text-left cursor-default select-none transition-all duration-200 ${
+                                className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl border text-[13px] font-bold text-left cursor-default select-none transition-all duration-200 ${
                                   isChecked
                                     ? 'bg-neutral-50 border-black'
                                     : 'bg-white border-gray-200'
@@ -319,7 +333,7 @@ export const SubjectManagementView: React.FC<SubjectManagementViewProps> = ({
                                     </svg>
                                   )}
                                 </div>
-                                <span className="text-black leading-tight break-words">{subject.name}</span>
+                                <span className="text-black leading-tight whitespace-nowrap">{subject.name}</span>
                               </div>
                             );
                           })}
