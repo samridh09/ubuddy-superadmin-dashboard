@@ -149,7 +149,6 @@ export const SubjectManagementView: React.FC<SubjectManagementViewProps> = ({
 
       await Promise.all(
         changedClasses.map(c => assignClassSubjects(c.id, {
-          school_id: schoolId,
           session_id: sessionId,
           subject_ids: c.assignedSubjectIds
         }))

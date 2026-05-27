@@ -104,7 +104,7 @@ export const deleteSubject = async (id: string): Promise<void> => {
 /**
  * Assign subjects to a specific class for a session
  */
-export const assignClassSubjects = async (classId: string, payload: { school_id: string, session_id: string, subject_ids: string[] }): Promise<void> => {
+export const assignClassSubjects = async (classId: string, payload: { session_id: string, subject_ids: string[] }): Promise<void> => {
   try {
     const response = await fetch(API_ENDPOINTS.classes.subjects(classId), {
       method: 'POST',
